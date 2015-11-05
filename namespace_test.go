@@ -20,17 +20,17 @@ limitations under the License.
 package utilities
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	_"fmt"
-
+	"fmt"
+	_ "fmt"
 )
 
 func TestSimpleMap(t *testing.T) {
-	Convey("Given flat strig to string map", t, func() {
+	Convey("Given flat string to string map", t, func() {
 		m := map[string]interface{}{
 			"Foo": "foo",
 			"Bar": "bar",
@@ -172,10 +172,10 @@ func TestMapCompositionComplex(t *testing.T) {
 }
 
 func TestSimpleJson(t *testing.T) {
-	Convey("Given flat strig to string map", t, func() {
+	Convey("Given flat struct", t, func() {
 
 		Foo := struct {
-			Bar int `json:"bar"`
+			Bar int    `json:"bar"`
 			Baz string `json:"baz"`
 		}{
 			Bar: 1,
@@ -184,7 +184,7 @@ func TestSimpleJson(t *testing.T) {
 
 		data, _ := json.Marshal(Foo)
 
-		Convey("When NamespaceFromMap is called with root as current", func() {
+		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
 			NamespaceFromJSON(&data, current, &ns)
@@ -196,6 +196,274 @@ func TestSimpleJson(t *testing.T) {
 			Convey("Then namespace should contain correct entries", func() {
 				So(ns, ShouldContain, "root/bar")
 				So(ns, ShouldContain, "root/baz")
+			})
+		})
+	})
+}
+
+func TestComplexJson(t *testing.T) {
+	Convey("Given composition ofd structs", t, func() {
+
+		Foo := struct {
+			Bar struct {
+				Qaz int `json:"qaz"`
+				Faz int `json:"faz"`
+			} `json:"bar"`
+			Baz string `json:"baz"`
+		}{
+			struct {
+				Qaz int `json:"qaz"`
+				Faz int `json:"faz"`
+			}{
+				1,
+				2,
+			},
+			"baz_val",
+		}
+
+		data, _ := json.Marshal(Foo)
+
+		Convey("When NamespaceFromJSON is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromJSON(&data, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 3)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/bar/qaz")
+				So(ns, ShouldContain, "root/bar/faz")
+				So(ns, ShouldContain, "root/baz")
+			})
+		})
+	})
+}
+
+func TestComplexJsonSlice(t *testing.T) {
+	Convey("Given composition of structs with slice", t, func() {
+
+		Foo := struct {
+			Bar struct {
+				Qaz int `json:"qaz"`
+				Faz int `json:"faz"`
+			} `json:"bar"`
+			Baz []string `json:"baz"`
+		}{
+			struct {
+				Qaz int `json:"qaz"`
+				Faz int `json:"faz"`
+			}{
+				1,
+				2,
+			},
+			[]string{"baz_val_1", "baz_val_2", "baz_val_3"},
+		}
+
+		data, _ := json.Marshal(Foo)
+
+		Convey("When NamespaceFromJSON is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromJSON(&data, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 5)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/bar/qaz")
+				So(ns, ShouldContain, "root/bar/faz")
+				So(ns, ShouldContain, "root/baz/0")
+				So(ns, ShouldContain, "root/baz/1")
+				So(ns, ShouldContain, "root/baz/2")
+			})
+		})
+	})
+}
+
+func TestComplexJsonSliceNested(t *testing.T) {
+	Convey("Given composition of structs with nested slice", t, func() {
+
+		Foo := struct {
+			Bar struct {
+				Qaz []int `json:"qaz"`
+				Faz int   `json:"faz"`
+			} `json:"bar"`
+			Baz string `json:"baz"`
+		}{
+			struct {
+				Qaz []int `json:"qaz"`
+				Faz int   `json:"faz"`
+			}{
+				[]int{1, 2},
+				2,
+			},
+			"baz_val",
+		}
+
+		data, _ := json.Marshal(Foo)
+
+		Convey("When NamespaceFromJSON is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromJSON(&data, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 4)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/bar/qaz/0")
+				So(ns, ShouldContain, "root/bar/qaz/1")
+				So(ns, ShouldContain, "root/bar/faz")
+				So(ns, ShouldContain, "root/baz")
+			})
+		})
+	})
+}
+
+func TestSimpleStruct(t *testing.T) {
+	Convey("Given flat struct", t, func() {
+
+		Foo := struct {
+			Bar int
+			Baz string
+		}{
+			Bar: 1,
+			Baz: "1",
+		}
+
+		Convey("When NamespaceFromComposition is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromComposition(Foo, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 2)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/Bar")
+				So(ns, ShouldContain, "root/Baz")
+			})
+		})
+	})
+}
+
+func TestComplexStruct(t *testing.T) {
+	Convey("Given composition of structs", t, func() {
+		fmt.Printf("\nTU\n")
+		Foo := struct {
+			Bar struct {
+				Qaz int
+				Faz int
+			}
+			Baz string
+		}{
+			struct {
+				Qaz int
+				Faz int
+			}{
+				1,
+				2,
+			},
+			"baz_val",
+		}
+
+		Convey("When NamespaceFromComposition is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromComposition(Foo, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 3)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/Bar/Qaz")
+				So(ns, ShouldContain, "root/Bar/Faz")
+				So(ns, ShouldContain, "root/Baz")
+			})
+		})
+	})
+}
+
+func TestComplexStructSlice(t *testing.T) {
+	Convey("Given composition of structs with slice", t, func() {
+
+		Foo := struct {
+			Bar struct {
+				Qaz int
+				Faz int
+			}
+			Baz []string
+		}{
+			struct {
+				Qaz int
+				Faz int
+			}{
+				1,
+				2,
+			},
+			[]string{"baz_val_1", "baz_val_2", "baz_val_3"},
+		}
+
+		Convey("When NamespaceFromComposition is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromComposition(Foo, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 5)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/Bar/Qaz")
+				So(ns, ShouldContain, "root/Bar/Faz")
+				So(ns, ShouldContain, "root/Baz/0")
+				So(ns, ShouldContain, "root/Baz/1")
+				So(ns, ShouldContain, "root/Baz/2")
+			})
+		})
+	})
+}
+
+func TestComplexCompositionSliceNested(t *testing.T) {
+	Convey("Given composition of structs with nested slice", t, func() {
+
+		Foo := struct {
+			Bar struct {
+				Qaz []int
+				Faz int
+			}
+			Baz string
+		}{
+			struct {
+				Qaz []int
+				Faz int
+			}{
+				[]int{1, 2},
+				2,
+			},
+			"baz_val",
+		}
+
+		Convey("When NamespaceFromComposition is called with root as current", func() {
+			ns := []string{}
+			current := "root"
+			NamespaceFromComposition(Foo, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 4)
+			})
+
+			Convey("Then namespace should contain correct entries", func() {
+				So(ns, ShouldContain, "root/Bar/Qaz/0")
+				So(ns, ShouldContain, "root/Bar/Qaz/1")
+				So(ns, ShouldContain, "root/Bar/Faz")
+				So(ns, ShouldContain, "root/Baz")
 			})
 		})
 	})

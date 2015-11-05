@@ -20,13 +20,13 @@ limitations under the License.
 package utilities
 
 import (
-	"reflect"
-	"strconv"
 	"encoding/json"
 	"path/filepath"
+	"reflect"
+	"strconv"
 
-	"github.com/vektra/errors"
 	"github.com/oleiade/reflections"
+	"github.com/vektra/errors"
 )
 
 func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]string) error {
@@ -40,18 +40,24 @@ func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]str
 		switch val.Kind() {
 
 		case reflect.Map:
-			NamespaceFromMap(
+			err := NamespaceFromMap(
 				mval.(map[string]interface{}),
 				cur,
 				namespace)
+			if err != nil {
+				return err
+			}
 
 		case reflect.Slice, reflect.Array:
 			if typ.Elem().Kind() == reflect.Map {
 				for i := 0; i < val.Len(); i++ {
-					NamespaceFromMap(
+					err := NamespaceFromMap(
 						val.Index(i).Interface().(map[string]interface{}),
 						filepath.Join(cur, strconv.Itoa(i)),
 						namespace)
+					if err != nil {
+						return err
+					}
 				}
 			} else {
 				for i := 0; i < val.Len(); i++ {
@@ -93,14 +99,54 @@ func NamespaceFromComposition(object interface{}, current string, namespace *[]s
 	}
 
 	for _, field := range fields {
-		tag, err := reflections.GetFieldTag(object, field, "json")
+		f, err := reflections.GetField(object, field)
 
 		if err != nil {
 			return err
 		}
 
+		val := reflect.ValueOf(f)
+		typ := reflect.TypeOf(f)
+		cur := filepath.Join(current, field)
 
+		switch reflect.ValueOf(f).Kind() {
+
+		case reflect.Struct:
+			err := NamespaceFromComposition(f, cur, namespace)
+			if err != nil {
+				return err
+			}
+
+		case reflect.Slice, reflect.Array:
+			if typ.Elem().Kind() == reflect.Struct {
+				for i := 0; i < val.Len(); i++ {
+					err := NamespaceFromComposition(
+						val.Index(i).Interface(),
+						filepath.Join(cur, strconv.Itoa(i)),
+						namespace)
+
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				for i := 0; i < val.Len(); i++ {
+					*namespace = append(*namespace, filepath.Join(cur, strconv.Itoa(i)))
+				}
+			}
+
+		default:
+			*namespace = append(*namespace, cur)
+		}
+	}
+
+	if len(*namespace) == 0 {
+		return errors.New("Namespace empty!\n")
 	}
 
 	return nil
 }
+
+// TODO - NamespaceFromCompositionByTag
+
+// TODO - Value getters (GetValueByTag, GetValueByNamespace etc)
