@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package utilities
+package ns
 
 import (
 	"encoding/json"
@@ -27,6 +27,8 @@ import (
 
 	"github.com/oleiade/reflections"
 	"github.com/vektra/errors"
+
+	. "github.com/intelsdi-x/pulse-plugin-utilities/logger"
 )
 
 func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]string) error {
@@ -36,7 +38,7 @@ func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]str
 		val := reflect.ValueOf(mval)
 		typ := reflect.TypeOf(mval)
 		cur := filepath.Join(current, mkey)
-
+		LogInfo("Logging from ns", "cur", cur)
 		switch val.Kind() {
 
 		case reflect.Map:

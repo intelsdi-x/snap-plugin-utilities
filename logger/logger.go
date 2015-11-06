@@ -20,24 +20,62 @@ limitations under the License.
 package logger
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
 
+type Fields map[string]interface{}
+
+var logFile *os.File
+var err error
+
 func init() {
+
 	// Log as default ASCII formatter
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
 
-	// Output to stderr instead of stdout, could also be a file.
-	log.SetOutput(os.Stderr)
+	// try to open file for logging
+	fname := strings.Join([]string{time.Now().Format("2006-01-02"), filepath.Base(os.Args[0])}, "_") + ".log"
+	if logFile == nil {
+		logFile, err = os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+		if err != nil {
+			fmt.Println("Logging to stderr")
+		}
+	}
 
-	// Only log the warning severity or above.
-	log.SetLevel(log.DebugLevel)
+	// Output to file or to stderr
+	if err != nil {
+		log.SetOutput(os.Stderr)
+	} else {
+		log.SetOutput(logFile)
+	}
+
+	// log PLUGIN_LOG_LEVEL severity or above.
+	switch strings.ToLower(os.Getenv("PLUGIN_LOG_LEVEL")) {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warning":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	case "panic":
+		log.SetLevel(log.PanicLevel)
+	default:
+		log.SetLevel(log.ErrorLevel)
+	}
 }
 
 func LogInfo(message string, args ...interface{}) {
@@ -64,27 +102,34 @@ func LogPanic(message string, args ...interface{}) {
 	setEntry(args...).Panic(message)
 }
 
-func setEntry(args ...interface{}) *log.Entry {
-	caller := getFunctionName()
-	if len(args) > 1 {
-
-		return log.WithFields(log.Fields{
-			"_func":          caller,
-			args[0].(string): args[1],
-		})
-	} else {
-		return log.WithFields(log.Fields{
-			"_func": caller,
-		})
-	}
+func Log(fields map[string]interface{}) *log.Entry {
+	fields["_func"] = getFunctionName(2)
+	return log.WithFields(fields)
 }
 
-func getFunctionName() string {
-	pc := make([]uintptr, 10)
+func setEntry(args ...interface{}) *log.Entry {
+	fields := log.Fields{"_func": getFunctionName(3)}
 
-	if runtime.Callers(4, pc) == 0 {
+	switch len(args) {
+	case 0:
+	case 1:
+		fields["val"] = args[0]
+	case 2:
+		key := args[0].(string)
+		fields[key] = args[1]
+	default:
+		fields["vals"] = args
+	}
+
+	return log.WithFields(fields)
+}
+
+func getFunctionName(skip int) string {
+	pc, _, _, ok := runtime.Caller(skip)
+
+	if !ok {
 		return "!<not_accessible>"
 	}
 
-	return runtime.FuncForPC(pc[0]).Name()
+	return filepath.Base(runtime.FuncForPC(pc).Name())
 }
