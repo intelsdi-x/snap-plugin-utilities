@@ -27,8 +27,6 @@ import (
 
 	"github.com/oleiade/reflections"
 	"github.com/vektra/errors"
-
-	. "github.com/intelsdi-x/pulse-plugin-utilities/logger"
 )
 
 func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]string) error {
@@ -38,7 +36,6 @@ func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]str
 		val := reflect.ValueOf(mval)
 		typ := reflect.TypeOf(mval)
 		cur := filepath.Join(current, mkey)
-		LogInfo("Logging from ns", "cur", cur)
 		switch val.Kind() {
 
 		case reflect.Map:
@@ -149,6 +146,22 @@ func NamespaceFromComposition(object interface{}, current string, namespace *[]s
 	return nil
 }
 
-// TODO - NamespaceFromCompositionByTag
+func NamespaceFromCompositionTags(object interface{}, current string, namespace *[]string) error {
+
+	data, err := json.Marshal(object)
+
+	if err != nil {
+		return err
+	}
+
+	var jmap map[string]interface{}
+	err = json.Unmarshal(data, &jmap)
+
+	if err != nil {
+		return err
+	}
+
+	return NamespaceFromMap(jmap, current, namespace)
+}
 
 // TODO - Value getters (GetValueByTag, GetValueByNamespace etc)
