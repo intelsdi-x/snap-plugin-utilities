@@ -1,38 +1,37 @@
 package main
 
 import (
-	. "github.com/intelsdi-x/pulse-plugin-utilities/pipeline"
 	"fmt"
+	"time"
+	. "github.com/intelsdi-x/pulse-plugin-utilities/source"
+
 )
 
-type Add struct {}
-
-func (a Add) Process(in chan interface{}) chan interface {} {
-	out := make(chan interface{})
-	go func() {
-		for i := range in {
-			val := i.(int)
-			out <- val + 10
-		}
-		close(out)
-	}()
-	return out
-}
-
-
 func main() {
-	p := NewPipeline(Add{})
+	time.Sleep(time.Millisecond)
+	ech := make(chan error)
+	out := make(chan interface{})
+	s := Source{"ls", []string{"-ltr"}}
+	go s.Generate(out, ech)
 
-	go func() {
-		for i := 0; i < 10; i++ {
-			fmt.Printf("Sending %d\n", i)
-			p.Enqueue(i)
+	LOOP:
+	for {
+		time.Sleep(100 * time.Millisecond)
+		select {
+		case data, ok := <- out:
+			if !ok {
+				fmt.Printf("Waiting for out ...\n")
+				time.Sleep(1 * time.Second)
+				fmt.Printf("Out empty!\n")
+				break LOOP;
+			}
+			fmt.Printf(">>> Recieving {%v}\n", data)
+		case e := <- ech:
+			fmt.Printf("ERRROR {%v}\n", e)
+			break LOOP;
+		case <-time.After(time.Second * 2):
+			fmt.Printf("No activity\n")
+			break LOOP
 		}
-		fmt.Printf("Closing pipeline\n")
-		p.Close()
-	}()
-
-	p.Dequeue(func(i interface{}) {
-		fmt.Printf("Recieving %v\n", i)
-	})
+	}
 }

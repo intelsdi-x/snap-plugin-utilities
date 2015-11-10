@@ -20,7 +20,7 @@ limitations under the License.
 package pipeline
 
 import (
-
+	"strings"
 )
 
 type Pipe interface {
@@ -36,10 +36,14 @@ func (p *Pipeline) Enqueue(item interface{}) {
 	p.head <- item
 }
 
-func (p *Pipeline) Dequeue(handler func(interface{}))  {
+func (p *Pipeline) Dequeue(handler func(interface{})) {
 	for i := range p.tail {
 		handler(i)
 	}
+}
+
+func (p *Pipeline) Output() chan interface{} {
+	return p.tail
 }
 
 func (p *Pipeline) Close() {
@@ -57,4 +61,34 @@ func NewPipeline(pipes ...Pipe) Pipeline {
 		}
 	}
 	return Pipeline{head: head, tail: next_chan}
+}
+
+type DoNothing struct{}
+
+func (dn DoNothing) Process(in chan interface{}) chan interface{} {
+	out := make(chan interface{})
+	go func() {
+		for i := range in {
+			out <- i
+		}
+		close(out)
+	}()
+	return out
+}
+
+type StringContains struct {
+	str string
+}
+
+func (t StringContains) Process(in chan interface{}) chan interface{} {
+	out := make(chan interface{})
+	go func() {
+		for i := range in {
+			if !strings.Contains(i.(string), t.str) {
+				out <- i.(string)
+			}
+		}
+		close(out)
+	}()
+	return out
 }
