@@ -23,6 +23,7 @@ import (
 	"bufio"
 	"os/exec"
 	"syscall"
+	"sync"
 )
 
 type Sourcer interface {
@@ -30,12 +31,12 @@ type Sourcer interface {
 }
 
 type Source struct {
-	command string
-	args    []string
+	Command string
+	Args    []string
 }
 
 func (s *Source) Generate(out chan interface{}, ech chan error) {
-	cmd := exec.Command(s.command, s.args...)
+	cmd := exec.Command(s.Command, s.Args...)
 	reader, err := cmd.StdoutPipe()
 
 	if err != nil {
@@ -46,13 +47,14 @@ func (s *Source) Generate(out chan interface{}, ech chan error) {
 
 	scanner := bufio.NewScanner(reader)
 
-	done := make(chan bool)
+	var done sync.WaitGroup
+	done.Add(1)
 	go func() {
 		for scanner.Scan() {
 			out <- scanner.Text()
 		}
 		close(out)
-		done <- true
+		done.Done()
 	}()
 
 	if err = cmd.Start(); err != nil {
@@ -61,7 +63,7 @@ func (s *Source) Generate(out chan interface{}, ech chan error) {
 		return
 	}
 
-	<-done
+	done.Wait()
 	status := cmd.Wait()
 
 	var waitStatus syscall.WaitStatus
