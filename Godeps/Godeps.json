@@ -1,0 +1,5 @@
+{
+	"ImportPath": "github.com/intelsdi-x/pulse-plugin-utilities",
+	"GoVersion": "go1.5",
+	"Deps": []
+}
