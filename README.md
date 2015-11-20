@@ -1,9 +1,37 @@
-Pulse plugin utilities
-================================
+<!--
+http://www.apache.org/licenses/LICENSE-2.0.txt
 
-Set of packages that provide tools for plugin development.
 
-Features include:
+Copyright 2015 Intel Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+[![Build Status](https://magnum.travis-ci.com/intelsdi-x/pulse-plugin-collector-docker.svg?token=HoxHq3yqBGpySzRd5XUm&branch=master)](https://magnum.travis-ci.com/intelsdi-x/pulse-plugin-collector-docker)
+# Pulse Plugin Utilities
+
+Set of packages that provide tools for plugin development
+
+1. [Documentation](#documentation)
+  * [Features](#features)
+  * [Examples](#examples)
+2. [Community Support](#community-support)
+3. [Contributing](#contributing)
+4. [License](#license-and-authors)
+5. [Acknowledgements](#acknowledgements)
+
+## Documentation
+
+### Features:
 
   * [config](#config-package)
   * [logger](#logger-package)
@@ -12,7 +40,9 @@ Features include:
   * [source](#source-package)
   * [stack](#stack-package)
 
-[`config`] package
+### Examples
+
+[config] package
 -------------------------------------------------------------------------------------------
 
 The `config` package provides helpful methods to retrive global config items.
@@ -38,7 +68,7 @@ See it in action:
 
 ```
 
-[`logger`] package
+[logger] package
 ---------------------------------------------------------------------------------------------
 
 The `logger` package wraps logrus package (https://github.com/Sirupsen/logrus).
@@ -64,7 +94,7 @@ func main() {
 ```
 
 
-[`ns`]  package
+[ns]  package
 ---------------------------------------------------------------------------------------
 The `ns` package provides functions to extract namespace from maps, JSON and struct compositions.
 It is useful for situations when full knowledge of available metrics is not known at time when GetMetricTypes() is called.
@@ -192,7 +222,7 @@ NamespaceFromCompositionTags example usage:
 	*/
 ```
 
-[`pipeline`] package
+[pipeline] package
 ----------------------------------------------------------------------------------------
 Creates array of Pipes connected by channels. Each Pipe can do single processing on data transmitted by channels
 
@@ -232,7 +262,7 @@ It can be used to implement transformations on incoming data
 
 ```
 
-[`source`] package
+[source] package
 -----------------------------------------------------------------------------------------
 The `source` package provides handy way of dealing with external command output. 
 It can be used for continous command execution (EMON or PCM like), or for single command calls.
@@ -259,7 +289,7 @@ It can be used for continous command execution (EMON or PCM like), or for single
 	}
 ```
 
-[`stack`] package
+[stack] package
 -----------------------------------------------------------------------------------------
 The `stack` package provides simple implementation of stack.
 
@@ -284,9 +314,26 @@ The `stack` package provides simple implementation of stack.
 	*/
 ```
 
-------
+## Community Support
+This repository is one of **many** plugins in the **Pulse Framework**: a powerful telemetry agent framework. To reach out to other uses, reach out to us on:
 
-Version History
-===============
+* Pulse Gitter channel (@TODO Link)
+* Our Google Group (@TODO Link)
 
-   * 1.0 - initial version 
+The full project is at http://github.com:intelsdi-x/pulse.
+
+## Contributing
+We love contributions! :heart_eyes:
+
+There's more than one way to give back, from examples to blogs to code updates. See our recommended process in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+Pulse, along with this plugin, is an Open Source software released under the Apache 2.0 [License](LICENSE).
+
+## Acknowledgements
+List authors, co-authors and anyone you'd like to mention
+
+* Author: [Izabella Raulin](https://github.com/IzabellaRaulin)
+* Author: [Marcin Krolik](https://github.com/marcin-krolik)
+
+**Thank you!** Your contribution is incredibly important to us.
