@@ -16,7 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-[![Build Status](https://magnum.travis-ci.com/intelsdi-x/pulse-plugin-collector-docker.svg?token=HoxHq3yqBGpySzRd5XUm&branch=master)](https://magnum.travis-ci.com/intelsdi-x/pulse-plugin-collector-docker)
+[![Build Status](https://magnum.travis-ci.com/intelsdi-x/pulse-plugin-utilities.svg?token=HoxHq3yqBGpySzRd5XUm&branch=master)(https://magnum.travis-ci.com/intelsdi-x/pulse-plugin-utilities)
 # Pulse Plugin Utilities
 
 Set of packages that provide tools for plugin development
