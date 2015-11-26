@@ -22,8 +22,8 @@ package source
 import (
 	"bufio"
 	"os/exec"
-	"syscall"
 	"sync"
+	"syscall"
 )
 
 type Sourcer interface {
@@ -31,12 +31,16 @@ type Sourcer interface {
 }
 
 type Source struct {
-	Command string
-	Args    []string
+	Command   string
+	Args      []string
+	Pdeathsig *syscall.Signal // Use nil when no Pdeathsig is used.
 }
 
 func (s *Source) Generate(out chan interface{}, ech chan error) {
 	cmd := exec.Command(s.Command, s.Args...)
+	if s.Pdeathsig != nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: *s.Pdeathsig}
+	}
 	reader, err := cmd.StdoutPipe()
 
 	if err != nil {
