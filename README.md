@@ -21,6 +21,8 @@ limitations under the License.
 
 Set of packages that provide tools for plugin development
 
+It's used in the [snap framework](http://github.com/intelsdi-x/snap).
+
 1. [Documentation](#documentation)
   * [Features](#features)
   * [Examples](#examples)
@@ -315,15 +317,10 @@ The `stack` package provides simple implementation of stack.
 ```
 
 ## Community Support
-This repository is one of **many** plugins in the **snap Framework**: a powerful telemetry agent framework. To reach out to other uses, reach out to us on:
-
-* snap Gitter channel (@TODO Link)
-* Our Google Group (@TODO Link)
-
-The full project is at http://github.com:intelsdi-x/snap.
+This repository is one of **many** plugins in **snap**, a powerful telemetry framework. See the full project at http://github.com/intelsdi-x/snap To reach out to other users, head to the [main framework](https://github.com/intelsdi-x/snap#community-support)
 
 ## Contributing
-We love contributions! :heart_eyes:
+We love contributions! 
 
 There's more than one way to give back, from examples to blogs to code updates. See our recommended process in [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -331,7 +328,6 @@ There's more than one way to give back, from examples to blogs to code updates. 
 snap, along with this plugin, is an Open Source software released under the Apache 2.0 [License](LICENSE).
 
 ## Acknowledgements
-List authors, co-authors and anyone you'd like to mention
 
 * Author: [Izabella Raulin](https://github.com/IzabellaRaulin)
 * Author: [Marcin Krolik](https://github.com/marcin-krolik)
