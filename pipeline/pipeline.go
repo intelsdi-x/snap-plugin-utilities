@@ -23,72 +23,148 @@ import (
 	"strings"
 )
 
-type Pipe interface {
-	Process(in chan interface{}) chan interface{}
+type Processor interface {
+	Run(input, output Pipe)
 }
 
-type Pipeline struct {
-	head chan interface{}
-	tail chan interface{}
+type Pipe chan interface{}
+
+func (p Pipe) Next(proc Processor) Pipe {
+	outPipe := make(Pipe)
+	go proc.Run(p, outPipe)
+	return outPipe
 }
 
-func (p *Pipeline) Enqueue(item interface{}) {
-	p.head <- item
-}
-
-func (p *Pipeline) Dequeue(handler func(interface{})) {
-	for i := range p.tail {
-		handler(i)
-	}
-}
-
-func (p *Pipeline) Output() chan interface{} {
-	return p.tail
-}
-
-func (p *Pipeline) Close() {
-	close(p.head)
-}
-
-func NewPipeline(pipes ...Pipe) Pipeline {
-	head := make(chan interface{})
-	var next_chan chan interface{}
-	for _, pipe := range pipes {
-		if next_chan == nil {
-			next_chan = pipe.Process(head)
-		} else {
-			next_chan = pipe.Process(next_chan)
-		}
-	}
-	return Pipeline{head: head, tail: next_chan}
-}
-
-type DoNothing struct{}
-
-func (dn DoNothing) Process(in chan interface{}) chan interface{} {
-	out := make(chan interface{})
+func (p Pipe) Destination(pipes ...Pipe) {
 	go func() {
-		for i := range in {
-			out <- i
+		for input := range p {
+			for _, output := range pipes {
+				output <- input
+			}
 		}
-		close(out)
+
+		for _, output := range pipes {
+			close(output)
+		}
 	}()
-	return out
+}
+
+func (p Pipe) Clone(n int) []Pipe {
+	newPipes := make([]Pipe, n)
+	for i, _ := range newPipes {
+		newPipes[i] = make(Pipe)
+	}
+
+	p.Destination(newPipes...)
+
+	return newPipes
+}
+
+func Pipeline(input Pipe, processors ...Processor) Pipe {
+	lastOutput := input
+	for _, proc := range processors {
+		lastOutput = lastOutput.Next(proc)
+	}
+	return lastOutput
+}
+
+type WaitForCompletion struct {
+}
+
+func (w WaitForCompletion) Run(input, output Pipe) {
+	for v := range input {
+		_ = v
+	}
+
+	output <- true
+
+	close(output)
+}
+
+type Filter struct {
+	FilterFunc func(item interface{}) bool
+}
+
+func (self Filter) Run(input, output Pipe) {
+	for v := range input {
+		if self.FilterFunc(v) {
+			output <- v
+		}
+	}
+
+	close(output)
+}
+
+type Collect struct {
+}
+
+func (self Collect) Run(input, output Pipe) {
+	group := []interface{}{}
+	for v := range input {
+		group = append(group, v)
+	}
+
+	output <- group
+
+	close(output)
+}
+
+const SKIP_ALL = -1
+
+type Skip struct {
+	Count int
+}
+
+func (self Skip) Run(input, output Pipe) {
+	i := 0
+	for v := range input {
+		if i < self.Count {
+			i++
+			continue
+		}
+		output <- v
+	}
+	close(output)
+}
+
+type LastValue struct {
+	last interface{}
+}
+
+func (self *LastValue) Run(input, output Pipe) {
+	for v := range input {
+		self.last = v
+		output <- v
+	}
+	close(output)
+}
+
+func (self *LastValue) Last() interface{} {
+	return self.last
+}
+
+type Nonblocking struct {
+}
+
+func (self Nonblocking) Run(input, output Pipe) {
+	for v := range input {
+		select {
+		case output <- v:
+		default:
+		}
+	}
+	close(output)
 }
 
 type StringContains struct {
-	str string
+	Str string
 }
 
-func (t StringContains) Process(in chan interface{}) chan interface{} {
-	out := make(chan interface{})
-	go func() {
-		for i := range in {
-			if !strings.Contains(i.(string), t.str) {
-				out <- i.(string)
-			}
+func (self StringContains) Run(input, output Pipe) {
+	for v := range input {
+		if strings.Contains(v.(string), self.Str) {
+			output <- v
 		}
-		close(out)
-	}()
-	return out
+	}
+	close(output)
 }
