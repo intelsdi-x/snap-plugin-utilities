@@ -30,7 +30,9 @@ import (
 	"github.com/vektra/errors"
 
 )
-
+// FromMap constructs list of namespaces from multilevel map using map keys as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
 func FromMap(m map[string]interface{}, current string, namespace *[]string) error {
 
 	for mkey, mval := range m {
@@ -78,6 +80,9 @@ func FromMap(m map[string]interface{}, current string, namespace *[]string) erro
 	return nil
 }
 
+// FromJSON constructs list of namespaces from json document using json literals as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
 func FromJSON(data *[]byte, current string, namespace *[]string) error {
 
 	var m map[string]interface{}
@@ -90,6 +95,9 @@ func FromJSON(data *[]byte, current string, namespace *[]string) error {
 	return FromMap(m, current, namespace)
 }
 
+// FromComposition constructs list of namespaces from multilevel struct compositions using field names as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
 func FromComposition(object interface{}, current string, namespace *[]string) error {
 
 	fields, err := reflections.Fields(object)
@@ -147,7 +155,9 @@ func FromComposition(object interface{}, current string, namespace *[]string) er
 
 	return nil
 }
-
+// FromCompositionTags constructs list of namespaces from multilevel struct composition using field tags as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
 func FromCompositionTags(object interface{}, current string, namespace *[]string) error {
 
 	data, err := json.Marshal(object)
