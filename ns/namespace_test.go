@@ -42,7 +42,7 @@ func TestSimpleMap(t *testing.T) {
 		Convey("When NamespaceFromMap is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromMap(m, current, &ns)
+			FromMap(m, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 3)
@@ -69,7 +69,7 @@ func TestMapWithSlice(t *testing.T) {
 		Convey("When NamespaceFromMap is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromMap(m, current, &ns)
+			FromMap(m, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 3)
@@ -96,7 +96,7 @@ func TestMapWithMap(t *testing.T) {
 		Convey("When NamespaceFromMap is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromMap(m, current, &ns)
+			FromMap(m, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 3)
@@ -123,7 +123,7 @@ func TestMapComposition(t *testing.T) {
 		Convey("When NamespaceFromMap is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromMap(m, current, &ns)
+			FromMap(m, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 5)
@@ -153,7 +153,7 @@ func TestMapCompositionComplex(t *testing.T) {
 		Convey("When NamespaceFromMap is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromMap(m, current, &ns)
+			FromMap(m, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 8)
@@ -189,7 +189,7 @@ func TestSimpleJson(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromJSON(&data, current, &ns)
+			FromJSON(&data, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 2)
@@ -228,7 +228,7 @@ func TestComplexJson(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromJSON(&data, current, &ns)
+			FromJSON(&data, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 3)
@@ -268,7 +268,7 @@ func TestComplexJsonSlice(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromJSON(&data, current, &ns)
+			FromJSON(&data, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 5)
@@ -310,7 +310,7 @@ func TestComplexJsonSliceNested(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromJSON(&data, current, &ns)
+			FromJSON(&data, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 4)
@@ -340,7 +340,7 @@ func TestSimpleStruct(t *testing.T) {
 		Convey("When NamespaceFromComposition is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromComposition(Foo, current, &ns)
+			FromComposition(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 2)
@@ -377,7 +377,7 @@ func TestComplexStruct(t *testing.T) {
 		Convey("When NamespaceFromComposition is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromComposition(Foo, current, &ns)
+			FromComposition(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 3)
@@ -415,7 +415,7 @@ func TestComplexStructSlice(t *testing.T) {
 		Convey("When NamespaceFromComposition is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromComposition(Foo, current, &ns)
+			FromComposition(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 5)
@@ -455,7 +455,7 @@ func TestComplexCompositionSliceNested(t *testing.T) {
 		Convey("When NamespaceFromComposition is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromComposition(Foo, current, &ns)
+			FromComposition(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 4)
@@ -485,7 +485,7 @@ func TestSimpleCompositionTags(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromCompositionTags(Foo, current, &ns)
+			FromCompositionTags(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 2)
@@ -522,7 +522,7 @@ func TestComplexCompositionTags(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromCompositionTags(Foo, current, &ns)
+			FromCompositionTags(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 3)
@@ -560,7 +560,7 @@ func TestComplexCompositionSliceTags(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromCompositionTags(Foo, current, &ns)
+			FromCompositionTags(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 5)
@@ -600,7 +600,7 @@ func TestComplexCompositionTagsSliceNested(t *testing.T) {
 		Convey("When NamespaceFromJSON is called with root as current", func() {
 			ns := []string{}
 			current := "root"
-			NamespaceFromCompositionTags(Foo, current, &ns)
+			FromCompositionTags(Foo, current, &ns)
 
 			Convey("Then namespace should be populated", func() {
 				So(len(ns), ShouldEqual, 4)

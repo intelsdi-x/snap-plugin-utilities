@@ -26,16 +26,23 @@ import (
 	"syscall"
 )
 
+// Sourcer is a tool to create methods for generation and parsing command output
 type Sourcer interface {
 	Generate(out chan interface{}, ech chan error)
 }
 
+// Source keeps information necessary to execute command or external program
 type Source struct {
 	Command   string
 	Args      []string
 	Pdeathsig *syscall.Signal // Use nil when no Pdeathsig is used.
 }
 
+// Generate implements Sourcer interface on Source object.
+// It takes output and error channel as arguments.
+// Output channel is used to convey output produced by external command.
+// Error channel is used to convey errors produced by external command.
+// It checks exit status of command and in case it was different then 0, it sends error.
 func (s *Source) Generate(out chan interface{}, ech chan error) {
 	cmd := exec.Command(s.Command, s.Args...)
 	if s.Pdeathsig != nil {

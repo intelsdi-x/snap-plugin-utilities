@@ -24,22 +24,26 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/oleiade/reflections"
 	"github.com/vektra/errors"
 )
 
-func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]string) error {
+// FromMap constructs list of namespaces from multilevel map using map keys as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
+func FromMap(m map[string]interface{}, current string, namespace *[]string) error {
 
 	for mkey, mval := range m {
 
 		val := reflect.ValueOf(mval)
 		typ := reflect.TypeOf(mval)
-		cur := filepath.Join(current, mkey)
+		cur := strings.Join([]string{current, mkey}, "/")
 		switch val.Kind() {
 
 		case reflect.Map:
-			err := NamespaceFromMap(
+			err := FromMap(
 				mval.(map[string]interface{}),
 				cur,
 				namespace)
@@ -50,9 +54,9 @@ func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]str
 		case reflect.Slice, reflect.Array:
 			if typ.Elem().Kind() == reflect.Map {
 				for i := 0; i < val.Len(); i++ {
-					err := NamespaceFromMap(
+					err := FromMap(
 						val.Index(i).Interface().(map[string]interface{}),
-						filepath.Join(cur, strconv.Itoa(i)),
+						strings.Join([]string{cur, strconv.Itoa(i)}, "/"),
 						namespace)
 					if err != nil {
 						return err
@@ -60,7 +64,7 @@ func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]str
 				}
 			} else {
 				for i := 0; i < val.Len(); i++ {
-					*namespace = append(*namespace, filepath.Join(cur, strconv.Itoa(i)))
+					*namespace = append(*namespace, strings.Join([]string{cur, strconv.Itoa(i)}, "/"))
 				}
 			}
 
@@ -76,7 +80,10 @@ func NamespaceFromMap(m map[string]interface{}, current string, namespace *[]str
 	return nil
 }
 
-func NamespaceFromJSON(data *[]byte, current string, namespace *[]string) error {
+// FromJSON constructs list of namespaces from json document using json literals as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
+func FromJSON(data *[]byte, current string, namespace *[]string) error {
 
 	var m map[string]interface{}
 	err := json.Unmarshal(*data, &m)
@@ -85,10 +92,13 @@ func NamespaceFromJSON(data *[]byte, current string, namespace *[]string) error 
 		return err
 	}
 
-	return NamespaceFromMap(m, current, namespace)
+	return FromMap(m, current, namespace)
 }
 
-func NamespaceFromComposition(object interface{}, current string, namespace *[]string) error {
+// FromComposition constructs list of namespaces from multilevel struct compositions using field names as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
+func FromComposition(object interface{}, current string, namespace *[]string) error {
 
 	fields, err := reflections.Fields(object)
 
@@ -111,7 +121,7 @@ func NamespaceFromComposition(object interface{}, current string, namespace *[]s
 		switch reflect.ValueOf(f).Kind() {
 
 		case reflect.Struct:
-			err := NamespaceFromComposition(f, cur, namespace)
+			err := FromComposition(f, cur, namespace)
 			if err != nil {
 				return err
 			}
@@ -119,7 +129,7 @@ func NamespaceFromComposition(object interface{}, current string, namespace *[]s
 		case reflect.Slice, reflect.Array:
 			if typ.Elem().Kind() == reflect.Struct {
 				for i := 0; i < val.Len(); i++ {
-					err := NamespaceFromComposition(
+					err := FromComposition(
 						val.Index(i).Interface(),
 						filepath.Join(cur, strconv.Itoa(i)),
 						namespace)
@@ -146,7 +156,10 @@ func NamespaceFromComposition(object interface{}, current string, namespace *[]s
 	return nil
 }
 
-func NamespaceFromCompositionTags(object interface{}, current string, namespace *[]string) error {
+// FromCompositionTags constructs list of namespaces from multilevel struct composition using field tags as namespace entries.
+// 'Current' value is prefixed to all namespace elements.
+// It returns nil in case of success or error if building namespaces failed.
+func FromCompositionTags(object interface{}, current string, namespace *[]string) error {
 
 	data, err := json.Marshal(object)
 
@@ -161,7 +174,7 @@ func NamespaceFromCompositionTags(object interface{}, current string, namespace 
 		return err
 	}
 
-	return NamespaceFromMap(jmap, current, namespace)
+	return FromMap(jmap, current, namespace)
 }
 
 // TODO - Value getters (GetValueByTag, GetValueByNamespace etc)

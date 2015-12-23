@@ -23,12 +23,16 @@ import (
 	"strings"
 )
 
+// Pipeline processing interface
 type Processor interface {
 	Run(input, output Pipe)
 }
 
+// Pipeline basic block element
 type Pipe chan interface{}
 
+// Next sets up following pipeline chain element
+// It returns last Pipe in Pipeline
 func (p Pipe) Next(proc Processor) Pipe {
 	outPipe := make(Pipe)
 	go proc.Run(p, outPipe)
