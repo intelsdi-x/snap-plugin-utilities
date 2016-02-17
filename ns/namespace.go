@@ -21,6 +21,7 @@ package ns
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -177,4 +178,61 @@ func FromCompositionTags(object interface{}, current string, namespace *[]string
 	return FromMap(jmap, current, namespace)
 }
 
-// TODO - Value getters (GetValueByTag, GetValueByNamespace etc)
+// GetValueByNamespace returns value stored in struct composition.
+// It requires filed tags on each struct field which may be represented as namespace component.
+// It iterates over fields recursively, checks tags until it finds leaf value.
+func GetValueByNamespace(object interface{}, ns []string) interface{} {
+	// current level of namespace
+	current := ns[0]
+	fields, err := reflections.Fields(object)
+	if err != nil {
+		fmt.Printf("Could not return fields for object{%v}\n", object)
+		return nil
+	}
+
+	for _, field := range fields {
+		tag, err := reflections.GetFieldTag(object, field, "json")
+		if err != nil {
+			fmt.Printf("Could not find tag for field{%s}\n", field)
+			return nil
+		}
+		// remove omitempty from tag
+		tag = strings.Replace(tag, ",omitempty", "", -1)
+		if tag == current {
+			val, _ := reflections.GetField(object, field)
+
+			// handling of special cases for slice and map
+			switch reflect.TypeOf(val).Kind() {
+			case reflect.Slice:
+				idx, _ := strconv.Atoi(ns[1])
+				val := reflect.ValueOf(val)
+				if val.Index(idx).Kind() == reflect.Struct {
+					return GetValueByNamespace(val.Index(idx).Interface(), ns[2:])
+				} else {
+					return val.Index(idx).Interface()
+				}
+			case reflect.Map:
+				key := ns[1]
+				// try uint64 map (memory_stats case)
+				if vi, ok := val.(map[string]uint64); ok {
+					return vi[key]
+				}
+				// try with hugetlb map (hugetlb_stats case)
+				val := reflect.ValueOf(val)
+				kval := reflect.ValueOf(key)
+				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
+					return GetValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
+				}
+			default:
+				// last ns, return value found
+				if len(ns) == 1 {
+					return val
+				} else {
+					// or go deeper
+					return GetValueByNamespace(val, ns[1:])
+				}
+			}
+		}
+	}
+	return nil
+}
