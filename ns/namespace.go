@@ -2,7 +2,7 @@
 http://www.apache.org/licenses/LICENSE-2.0.txt
 
 
-Copyright 2015 Intel Corporation
+Copyright 2016 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package ns
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -177,4 +178,64 @@ func FromCompositionTags(object interface{}, current string, namespace *[]string
 	return FromMap(jmap, current, namespace)
 }
 
-// TODO - Value getters (GetValueByTag, GetValueByNamespace etc)
+// GetValueByNamespace returns value stored in struct composition.
+// It requires filed tags on each struct field which may be represented as namespace component.
+// It iterates over fields recursively, checks tags until it finds leaf value.
+func GetValueByNamespace(object interface{}, ns []string) interface{} {
+	// current level of namespace
+	current := ns[0]
+	fields, err := reflections.Fields(object)
+	if err != nil {
+		fmt.Printf("Could not return fields for object{%v}\n", object)
+		return nil
+	}
+
+	for _, field := range fields {
+		tag, err := reflections.GetFieldTag(object, field, "json")
+		if err != nil {
+			fmt.Printf("Could not find tag for field{%s}\n", field)
+			return nil
+		}
+		// remove omitempty from tag
+		tag = strings.Replace(tag, ",omitempty", "", -1)
+		if tag == current {
+			val, err := reflections.GetField(object, field)
+			if err != nil {
+				fmt.Printf("Could not retrieve field{%s}\n", field)
+				return nil
+			}
+			// handling of special cases for slice and map
+			switch reflect.TypeOf(val).Kind() {
+			case reflect.Slice:
+				idx, _ := strconv.Atoi(ns[1])
+				val := reflect.ValueOf(val)
+				if val.Index(idx).Kind() == reflect.Struct {
+					return GetValueByNamespace(val.Index(idx).Interface(), ns[2:])
+				} else {
+					return val.Index(idx).Interface()
+				}
+			case reflect.Map:
+				key := ns[1]
+
+				if vi, ok := val.(map[string]uint64); ok {
+					return vi[key]
+				}
+
+				val := reflect.ValueOf(val)
+				kval := reflect.ValueOf(key)
+				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
+					return GetValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
+				}
+			default:
+				// last ns, return value found
+				if len(ns) == 1 {
+					return val
+				} else {
+					// or go deeper
+					return GetValueByNamespace(val, ns[1:])
+				}
+			}
+		}
+	}
+	return nil
+}
