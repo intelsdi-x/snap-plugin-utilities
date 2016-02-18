@@ -2,7 +2,7 @@
 http://www.apache.org/licenses/LICENSE-2.0.txt
 
 
-Copyright 2015 Intel Corporation
+Copyright 2016 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -199,8 +199,11 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 		// remove omitempty from tag
 		tag = strings.Replace(tag, ",omitempty", "", -1)
 		if tag == current {
-			val, _ := reflections.GetField(object, field)
-
+			val, err := reflections.GetField(object, field)
+			if err != nil {
+				fmt.Printf("Could not retrieve field{%s}\n", field)
+				return nil
+			}
 			// handling of special cases for slice and map
 			switch reflect.TypeOf(val).Kind() {
 			case reflect.Slice:
@@ -213,11 +216,11 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 				}
 			case reflect.Map:
 				key := ns[1]
-				// try uint64 map (memory_stats case)
+
 				if vi, ok := val.(map[string]uint64); ok {
 					return vi[key]
 				}
-				// try with hugetlb map (hugetlb_stats case)
+
 				val := reflect.ValueOf(val)
 				kval := reflect.ValueOf(key)
 				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
