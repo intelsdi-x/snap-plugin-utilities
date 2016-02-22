@@ -28,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/oleiade/reflections"
-	"github.com/vektra/errors"
 )
 
 // FromMap constructs list of namespaces from multilevel map using map keys as namespace entries.
@@ -75,7 +74,7 @@ func FromMap(m map[string]interface{}, current string, namespace *[]string) erro
 	}
 
 	if len(*namespace) == 0 {
-		return errors.New("Namespace empty!\n")
+		return fmt.Errorf("Namespace empty!")
 	}
 
 	return nil
@@ -151,7 +150,7 @@ func FromComposition(object interface{}, current string, namespace *[]string) er
 	}
 
 	if len(*namespace) == 0 {
-		return errors.New("Namespace empty!\n")
+		return fmt.Errorf("Namespace empty!")
 	}
 
 	return nil
