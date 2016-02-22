@@ -104,7 +104,7 @@ func (set *StringSet) Elements() []string {
 }
 
 // Init initializes sets internal map
-func Init() StringSet {
+func InitSet() StringSet {
 	set := StringSet{}
 	set.set = map[string]bool{}
 	return set
