@@ -13,7 +13,9 @@ TEST_SUITE=$1
 if [[ $TEST_SUITE == "unit" ]]; then
 	go get github.com/axw/gocov/gocov
 	go get github.com/mattn/goveralls
-	go get -u github.com/golang/lint/golint
+	if [[ `go version` =~ go1.5  ||  `go version` =~ go1.6 ]]; then
+	    go get -u github.com/golang/lint/golint
+	fi
 	go get golang.org/x/tools/cmd/vet
 	go get golang.org/x/tools/cmd/goimports
 	go get github.com/smartystreets/goconvey/convey
