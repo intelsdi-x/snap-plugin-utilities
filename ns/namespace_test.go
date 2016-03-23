@@ -615,3 +615,39 @@ func TestComplexCompositionTagsSliceNested(t *testing.T) {
 		})
 	})
 }
+
+func TestReplaceNotAllowedCharsInNamespacePart(t *testing.T) {
+	Convey("Given list of namespace parts with not allowed chars", t, func() {
+
+		incorrectMetricParts := []string{"test(test1)", "test[test2]", "test{test3}",
+			"test 4", "test.5", "test,6", "test;7", "test!8", "test?9", "test|10",
+			"test\\11", "test/12", "test^13", "test\"14", "test`15", "test'16"}
+
+		Convey("When ReplaceSpecialCharsInNamespacePart is called namespace parts should contain only allowed characters", func() {
+			correctMetricParts := []string{"test_test1", "test_test2", "test_test3",
+				"test_4", "test_5", "test_6", "test_7", "test_8", "test_9", "test_10",
+				"test_11", "test_12", "test_13", "test_14", "test_15", "test_16"}
+
+			for i := range incorrectMetricParts {
+				correctedMetricParts := ReplaceNotAllowedCharsInNamespacePart(incorrectMetricParts[i])
+				So(correctedMetricParts, ShouldEqual, correctMetricParts[i])
+				So(ValidateMetricNamespacePart(correctedMetricParts), ShouldBeNil)
+			}
+		})
+	})
+}
+
+func TestValidateMetricNamespacePart(t *testing.T) {
+	Convey("Given list of namespace parts with not allowed chars", t, func() {
+
+		incorrectMetricParts := []string{"test1)", "[test2]", "{test3}",
+			"test 4", "test.5", "test,6", "test;7", "test!8", "test?9", "test|10",
+			"test\\11", "test/12", "test^13", "test\"14", "test`15", "test'16"}
+
+		Convey("When ValidateMetricNamespace is called not allowed chars should be detected", func() {
+			for i := range incorrectMetricParts {
+				So(ValidateMetricNamespacePart(incorrectMetricParts[i]), ShouldNotBeNil)
+			}
+		})
+	})
+}
