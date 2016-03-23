@@ -103,6 +103,11 @@ func (set *StringSet) Elements() []string {
 	return iter
 }
 
+// Size returns number of elements in set
+func (set *StringSet) Size() int {
+	return len(set.set)
+}
+
 // Init initializes sets internal map
 func InitSet() StringSet {
 	set := StringSet{}
