@@ -21,63 +21,39 @@ package strings
 
 // StringMap is custom wrapper for golang map
 // It provides additional capabilities like list of keys, list of values, Empty
-type StringMap struct {
-	m map[string]string
-}
-
-// NewEmptyMap creates new StringMap
-func NewEmptyMap() StringMap {
-	m := map[string]string{}
-	return StringMap{m: m}
-}
-
-// NewEmptyMap creates new StringMap
-func NewFromMap(m map[string]string) StringMap {
-	return StringMap{m: m}
-}
+type StringMap map[string]string
 
 // AddMap adds all key/value pairs from map m to StringMap
 // If key already exists, it will be overwritten by new value
 func (sm StringMap) AddMap(m map[string]string) {
 	if sm.Size() == 0 {
-		sm.m = m
+		sm = m
 	} else {
 		for k, v := range m {
-			sm.m[k] = v
+			sm[k] = v
 		}
 	}
 }
 
-// Add key/value pair to map
-func (sm StringMap) Add(key, value string) {
-	sm.m[key] = value
-}
-
-// Remove key/value pair from map
-func (sm StringMap) Remove(key string) {
-	delete(sm.m, key)
-}
-
 // RemoveAll deletes all key/value pairs from map
 func (sm StringMap) RemoveAll() {
-	sm.m = map[string]string{}
+	sm = map[string]string{}
 }
-
 
 // Size return number of key/value pairs
 func (sm StringMap) Size() int {
-	return len(sm.m)
+	return len(sm)
 }
 
 // Empty checks if map contains any key/value pair
 func (sm StringMap) Empty() bool {
-	return len(sm.m) == 0
+	return len(sm) == 0
 }
 
 // Keys returns slice of map keys
 func (sm StringMap) Keys() []string {
 	keys := []string{}
-	for k, _ := range sm.m {
+	for k, _ := range sm {
 		keys = append(keys, k)
 	}
 	return keys
@@ -86,19 +62,14 @@ func (sm StringMap) Keys() []string {
 // Values returns slice of map values
 func (sm StringMap) Values() []string {
 	values := []string{}
-	for _, v := range sm.m {
+	for _, v := range sm {
 		values = append(values, v)
 	}
 	return values
 }
 
-// Get returns value for given key
-func (sm StringMap) Get(key string) string {
-	return sm.m[key]
-}
-
 // HasKey checks if key exists in map
 func (sm StringMap) HasKey(key string) bool {
-	_, found := sm.m[key]
+	_, found := sm[key]
 	return found
 }
