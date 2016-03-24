@@ -54,7 +54,7 @@ func (set *StringSet) Size() int {
 	return len(set.set)
 }
 
-// Init initializes sets internal map
+// InitSet initializes sets internal map
 func InitSet() StringSet {
 	set := StringSet{}
 	set.set = map[string]bool{}

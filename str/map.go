@@ -53,7 +53,7 @@ func (sm StringMap) Empty() bool {
 // Keys returns slice of map keys
 func (sm StringMap) Keys() []string {
 	keys := []string{}
-	for k, _ := range sm {
+	for k := range sm {
 		keys = append(keys, k)
 	}
 	return keys
