@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package strings
+package str
 
 // ForEach applies handler function to each elements of slice
 // Handler function must transform string to string (string -> string)
@@ -71,46 +71,4 @@ func All(slice []string, handler func(string) bool) bool {
 		}
 	}
 	return true
-}
-
-// StringSet is set implementation on top of map
-type StringSet struct {
-	set map[string]bool
-}
-
-// Add adds new item to set
-func (set *StringSet) Add(element string) bool {
-	_, found := set.set[element]
-	set.set[element] = true
-	return !found
-}
-
-// Delete removes element from set
-func (set *StringSet) Delete(element string) bool {
-	_, found := set.set[element]
-	if found {
-		delete(set.set, element)
-	}
-	return found
-}
-
-// Elements returns list of set elements
-func (set *StringSet) Elements() []string {
-	iter := []string{}
-	for k := range set.set {
-		iter = append(iter, k)
-	}
-	return iter
-}
-
-// Size returns number of elements in set
-func (set *StringSet) Size() int {
-	return len(set.set)
-}
-
-// Init initializes sets internal map
-func InitSet() StringSet {
-	set := StringSet{}
-	set.set = map[string]bool{}
-	return set
 }

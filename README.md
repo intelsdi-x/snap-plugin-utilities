@@ -40,6 +40,7 @@ It's used in the [snap framework](http://github.com/intelsdi-x/snap).
   * [pipeline](#pipeline-package)
   * [source](#source-package)
   * [stack](#stack-package)
+  * [str](#str-package)
 
 ### Examples
 
@@ -340,6 +341,53 @@ The `stack` package provides simple implementation of stack.
 	2
 	1
 	*/
+```
+[str] package
+-------------------------------------------------------------------------------------------
+
+The `str` package provides helpful methods to work with string sets, maps and slices
+
+See it in action:
+
+Set:
+```go
+	set := InitSet()
+	set.Add("element")
+	elements := set.Elements()
+	set.Delete("element")
+```
+
+Map:
+```go
+	sMap := StringMap{}
+	sMap["key"] = "val"
+	keys := sMap.Keys()
+	values := sMap.Values()
+	sMap.AddMap(map[string]string{"new": "new"})
+```
+
+Slices
+```go
+	elements := []string{"a_", "b_", "___c", "1", "ab1"}
+	ForEach(elements, func(e string) string {
+		return strings.Replace(e, "_", "", -1)
+	})
+	
+	found := Contains(elements, "a")
+	
+	filtered := Filter(elements, func(e string) bool {
+		return strings.Contains(e, "1")
+	})
+	
+	found := Any(elements, func(e string) bool {
+		return strings.Contains(e, "1")
+	})
+	
+	found := All(elements, func(e string) bool {
+		return strings.Contains(e, "1")
+	})
+			
+	
 ```
 
 ## Community Support
