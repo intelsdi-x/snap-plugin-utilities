@@ -97,7 +97,11 @@ func main() {
 
 [ns]  package
 ---------------------------------------------------------------------------------------
-The `ns` package provides functions to extract namespace from maps, JSON and struct compositions.
+The `ns` package provides functions:
+- to extract namespace from maps, JSON and struct compositions,
+- to validate parts of namespace and detect not allowed characters,
+- to replace not allowed characters in parts of namespace.
+
 It is useful for situations when full knowledge of available metrics is not known at time when GetMetricTypes() is called.
 
 NamespaceFromMap example usage:
@@ -221,6 +225,29 @@ NamespaceFromCompositionTags example usage:
 	"root/bar/faz"
 	"root/baz"
 	*/
+```
+ReplaceNotAllowedCharsInNamespacePart example usage:
+```go
+     ns := []string{"intel", "plugin", "metric^1"}
+	for i := range ns {
+		ns[i] = ReplaceNotAllowedCharsInNamespacePart(ns[i])
+	}
+    /*
+	ns contains:
+	"intel"
+	"plugin"
+	"metric_1"
+	*/
+```
+ValidateMetricNamespacePart example usage:
+```go
+    ns := []string{"intel", "plugin", "metric^1"}
+	for i := range ns {
+		err := ValidateMetricNamespacePart(ns[i])
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 ```
 
 [pipeline] package

@@ -30,6 +30,16 @@ import (
 	"github.com/oleiade/reflections"
 )
 
+//notAllowedChars array with not allowed characters in namespace
+var notAllowedChars = map[string][]string{
+	"brackets":     {"(", ")", "[", "]", "{", "}"},
+	"spaces":       {" "},
+	"punctuations": {".", ",", ";", "?", "!"},
+	"slashes":      {"|", "\\", "/"},
+	"carets":       {"^"},
+	"quotations":   {"\"", "`", "'"},
+}
+
 // FromMap constructs list of namespaces from multilevel map using map keys as namespace entries.
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
@@ -233,6 +243,30 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 					// or go deeper
 					return GetValueByNamespace(val, ns[1:])
 				}
+			}
+		}
+	}
+	return nil
+}
+
+//ReplaceNotAllowedCharsInNamespacePart replaces not allowed characters in namespace part  by '_'
+func ReplaceNotAllowedCharsInNamespacePart(ns string) string {
+	for _, chars := range notAllowedChars {
+		for _, ch := range chars {
+			ns = strings.Replace(ns, ch, "_", -1)
+			ns = strings.Replace(ns, "__", "_", -1)
+		}
+	}
+	ns = strings.Trim(ns, "_")
+	return ns
+}
+
+//ValidateMetricNamespacePart checks if namespace part contains not allowed characters
+func ValidateMetricNamespacePart(ns string) error {
+	for _, chars := range notAllowedChars {
+		for _, ch := range chars {
+			if strings.ContainsAny(ns, ch) {
+				return fmt.Errorf("Namespace contains not allowed chars, namespace part: %s, not allowed char: %s", ns, ch)
 			}
 		}
 	}
