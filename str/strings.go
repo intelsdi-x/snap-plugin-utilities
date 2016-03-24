@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package strings
+package str
 
 // ForEach applies handler function to each elements of slice
 // Handler function must transform string to string (string -> string)

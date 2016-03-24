@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package strings
+package str
 
 // StringMap is custom wrapper for golang map
 // It provides additional capabilities like list of keys, list of values, Empty
