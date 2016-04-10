@@ -253,42 +253,37 @@ ValidateMetricNamespacePart example usage:
 
 [pipeline] package
 ----------------------------------------------------------------------------------------
-Creates array of Pipes connected by channels. Each Pipe can do single processing on data transmitted by channels
+Creates array of Processors connected by channels. Each Processor can do single processing on data transmitted by channels
 
-Pipe is interface which consists of single method Process, which takes input channel and returns channel.
+Processor is interface which consists of single method Run, whose arguments are input and output Pipes.
+Pipe is channel which can through interface{}
 It can be used to implement transformations on incoming data
 
 ```go
 	type DoNothing struct{}
 
-	func (dn DoNothing) Process(in chan interface{}) chan interface{} {
-		out := make(chan interface{})
-		go func() {
-			for i := range in {
-				out <- i
-			}
-			close(out)
-		}()
-		return out
+	func (self DoNothing) Run(input, output Pipe) {
+	        for v := range input {
+		        output <- v
+		}
+		close(output)
 	}	
-	
-	type FilterString struct{}
 
-	func (dn FilterString) Process(in chan interface{}) chan interface{} {
-		out := make(chan interface{})
-		go func() {
-			for i := range in {
-				if !strings.Contains(i.(string), "foo") {
-					out <- i
-				}
-			}
-			close(out)
-		}()
-		return out
+	type StringContains struct{
+	     Str string
 	}
-	
-	pipeline := NewPipeline(DoNothing{}, FilterString{}) 
 
+	func (self StringContains) Run(input, output Pipe) {
+	        for v := range input {
+		        if strings.Contains(v.(string), self.Str) {
+			        output <- v
+			}
+		}
+		close(output)
+	}
+
+	inputPipe := make(Pipe)
+	outputPipe := Pipeline(inputPipe, DoNothing{}, StringContains{})
 ```
 
 [source] package
