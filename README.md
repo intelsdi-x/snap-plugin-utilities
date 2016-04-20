@@ -96,7 +96,7 @@ func main() {
 ```
 
 
-[ns]  package
+[ns] package
 ---------------------------------------------------------------------------------------
 The `ns` package provides functions:
 - to extract namespace from maps, JSON and struct compositions,
@@ -249,6 +249,46 @@ ValidateMetricNamespacePart example usage:
 			fmt.Println(err)
 		}
 	}
+```
+
+FromCompositeObject is a configurable function for building namespaces from all kinds of nested maps, structs and slices.
+Offers control over inspecting `nil` pointers, empty containers and exposing struct fields under json tags.
+Available options include (presented with default values):
+```go
+InspectEmptyContainers(AlwaysTrue),
+InspectNilPointers(AlwaysTrue),
+EntryForContainersRoot(AlwaysFalse),
+ExportJsonFieldNames(AlwaysTrue),
+WildcardEntryInContainer(AlwaysFalse),
+SanitizeNamespaceParts(AlwaysTrue).
+```
+Example usage:
+```go
+	type first struct {
+		Uno bool `json:"uno_f"`
+	}
+	type fourth struct {
+		Cuatro bool
+	}
+	m := struct {
+		First  *first         `json:"first_f"`
+		Second map[string]int `json:"second_f"`
+		Third  int            `json:"-"`
+		Fourth []*fourth
+	}{
+		First:  nil,
+		Fourth: []*fourth{&fourth{}, &fourth{}}}
+
+	ns := []string{}
+	FromCompositeObject(m, "root", &ns, WildcardEntryInContainer(AlwaysTrue))
+	
+	/* ns contains:
+  "root/first_f/uno_f",
+  "root/second_f/*",
+  "root/Fourth/*/Cuatro",
+  "root/Fourth/0/Cuatro",
+  "root/Fourth/1/Cuatro"
+	*/
 ```
 
 [pipeline] package

@@ -23,6 +23,8 @@ package ns
 
 import (
 	"encoding/json"
+	"reflect"
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -648,6 +650,623 @@ func TestValidateMetricNamespacePart(t *testing.T) {
 			for i := range incorrectMetricParts {
 				So(ValidateMetricNamespacePart(incorrectMetricParts[i]), ShouldNotBeNil)
 			}
+		})
+	})
+}
+
+func TestFromCompositeObject(t *testing.T) {
+
+	//// checking the effect of options, first - nil pointers
+	Convey("Given struct with nil pointers", t, func() {
+		type delta struct {
+			Eins int
+		}
+		type uno struct {
+			Alpha bool
+			Delta *delta
+		}
+		m := struct {
+			First *uno
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then nil pointers should be expanded by default at all levels", func() {
+				So(ns, ShouldContain, "root/First/Alpha")
+				So(ns, ShouldContain, "root/First/Delta/Eins")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with nil pointer expansion disabled at all levels", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, InspectNilPointers(AlwaysFalse))
+
+			Convey("Then no nil pointers should be expanded at any level", func() {
+				So(ns, ShouldNotContain, "root/First/Alpha")
+				So(ns, ShouldNotContain, "root/First/Delta/Eins")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with nil pointer expansion disabled at second level", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, InspectNilPointers(func(current string, typ reflect.Type) bool {
+				return strings.Count(current, "/") < 2
+			}))
+
+			Convey("Then nil pointer should be expanded only at first level", func() {
+				So(ns, ShouldContain, "root/First/Alpha")
+				So(ns, ShouldNotContain, "root/First/Delta/Eins")
+			})
+		})
+	})
+
+	//// checking effect on empty containers
+	Convey("Given struct with empty containers", t, func() {
+		type dos struct {
+			Alpha int
+		}
+		type first struct {
+			Uno bool
+			Dos []dos
+		}
+		m := struct {
+			First []first
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then empty containers should be expanded at all levels", func() {
+				So(ns, ShouldContain, "root/First/*/Uno")
+				So(ns, ShouldContain, "root/First/*/Dos/*/Alpha")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with disabled empty container expansion at all levels", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, InspectEmptyContainers(AlwaysFalse))
+
+			Convey("Then empty containers should be expanded at all levels", func() {
+				So(ns, ShouldNotContain, "root/First/*/Uno")
+				So(ns, ShouldNotContain, "root/First/*/Dos/*/Alpha")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with empty container expansion disabled at second level", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, InspectEmptyContainers(func(current string, typ reflect.Type) bool {
+				return strings.Count(current, "/") < 3
+			}))
+
+			Convey("Then nil pointer should be expanded only at first level", func() {
+				So(ns, ShouldContain, "root/First/*/Uno")
+				So(ns, ShouldNotContain, "root/First/*/Dos/*/Alpha")
+			})
+		})
+	})
+
+	Convey("Given struct with some containers", t, func() {
+		type dos struct {
+			Alpha int
+		}
+		type first struct {
+			Uno bool
+			Dos []dos
+		}
+		m := struct {
+			First map[string]first
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then no empty container should be expanded at any levels", func() {
+				So(ns, ShouldNotContain, "root/First")
+				So(ns, ShouldNotContain, "root/First/*/Dos")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with enabled entries for container roots at all levels", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, EntryForContainersRoot(AlwaysTrue))
+
+			Convey("Then containers should have own entries at all levels", func() {
+				So(ns, ShouldContain, "root/First")
+				So(ns, ShouldContain, "root/First/*/Dos")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with entries for container roots disabled at second level", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, EntryForContainersRoot(func(current string, typ reflect.Type) bool {
+				return strings.Count(current, "/") < 3
+			}))
+
+			Convey("Then entry for container root should be added only at first level", func() {
+				So(ns, ShouldContain, "root/First")
+				So(ns, ShouldNotContain, "root/First/*/Dos")
+			})
+		})
+	})
+
+	//// checking json tag expansion
+	Convey("Given struct with some structs annotated with json tags", t, func() {
+		type dos struct {
+			Alpha int `json:""`
+		}
+		type first struct {
+			Uno  bool `json:"uno_f,omitempty"`
+			Dos  dos
+			Tres string `json:"-,omitempty"`
+		}
+		m := struct {
+			First  first
+			Second string `json:"second_f"`
+			Third  bool   `json:"-"`
+			Fourth int    `json:",omitempty"`
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then fields at all levels should be exported basing on json tags", func() {
+				So(ns, ShouldContain, "root/First/uno_f")
+				So(ns, ShouldContain, "root/First/Dos/Alpha")
+				So(ns, ShouldContain, "root/second_f")
+				So(ns, ShouldContain, "root/Fourth")
+			})
+
+			Convey("Then fields hidden by json tag should not be exported at any level", func() {
+				So(ns, ShouldNotContain, "root/Third")
+				So(ns, ShouldNotContain, "root/First/Tres")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with json export disabled at all levels", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, ExportJsonFieldNames(AlwaysFalse))
+
+			Convey("Then fields at all levels should be exported basing on real field names", func() {
+				So(ns, ShouldContain, "root/First/Uno")
+				So(ns, ShouldContain, "root/First/Dos/Alpha")
+				So(ns, ShouldContain, "root/First/Tres")
+				So(ns, ShouldContain, "root/Second")
+				So(ns, ShouldContain, "root/Third")
+				So(ns, ShouldContain, "root/Fourth")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with json export disabled at second level", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, ExportJsonFieldNames(func(current string, typ reflect.Type) bool {
+				return strings.Count(current, "/") == 0
+			}))
+
+			Convey("Then fields at first level should be exported basing on json tags", func() {
+				So(ns, ShouldContain, "root/second_f")
+				So(ns, ShouldNotContain, "root/Third")
+				So(ns, ShouldContain, "root/Fourth")
+			})
+
+			Convey("Then fields at second level and deeper should be exported basing on actual field names", func() {
+				So(ns, ShouldContain, "root/First/Uno")
+				So(ns, ShouldContain, "root/First/Dos/Alpha")
+				So(ns, ShouldContain, "root/First/Tres")
+			})
+		})
+	})
+
+	//// testing wildcard entries for containers
+	Convey("Given struct with some containers", t, func() {
+		type dos struct {
+			Alpha int
+		}
+		type first struct {
+			Uno bool
+			Dos []dos
+		}
+		m := struct {
+			First []first
+		}{
+			First: []first{
+				first{},
+				first{Dos: []dos{
+					dos{},
+					dos{},
+				}},
+				first{}}}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then discovered entries should be added for containers at any level", func() {
+				So(ns, ShouldContain, "root/First/0/Uno")
+				So(ns, ShouldContain, "root/First/1/Dos/0/Alpha")
+			})
+
+			Convey("Then NO wildcard entry should be added for non-empty container at any level", func() {
+				So(ns, ShouldNotContain, "root/First/*/Uno")
+				So(ns, ShouldNotContain, "root/First/1/Dos/*/Alpha")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with  WildcardEntryInContainer enabled at all levels", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, WildcardEntryInContainer(AlwaysTrue))
+
+			Convey("Then wildcard entries should be added for non-empty container at any level", func() {
+				So(ns, ShouldContain, "root/First/*/Uno")
+				So(ns, ShouldContain, "root/First/1/Dos/*/Alpha")
+			})
+
+			Convey("Then discovered entries should still be present at any level", func() {
+				So(ns, ShouldContain, "root/First/0/Uno")
+				So(ns, ShouldContain, "root/First/1/Dos/0/Alpha")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with  WildcardEntryInContainer disabled at 4th level", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, WildcardEntryInContainer(func(current string, typ reflect.Type) bool {
+				res := strings.Count(current, "/")+1 < 4
+				return res
+			}))
+
+			Convey("Then wildcard entries should be added only for containers at level <4", func() {
+				So(ns, ShouldContain, "root/First/*/Uno")
+				So(ns, ShouldNotContain, "root/First/1/Dos/*/Alpha")
+			})
+
+			Convey("Then discovered entries should still be present at any level", func() {
+				So(ns, ShouldContain, "root/First/0/Uno")
+				So(ns, ShouldContain, "root/First/1/Dos/0/Alpha")
+			})
+		})
+	})
+
+	//// checking namespace sanitization
+	Convey("Given struct with some namespace-unsafe characters", t, func() {
+		type first struct {
+			Uno  bool   `json:"uno[f]"`
+			Tres string `json:"tres(f)"`
+		}
+		m := struct {
+			First  first
+			Second string `json:"second(f)"`
+			Third  bool   `json:"third[f]"`
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then all parts of namespace at all levels should be free from unsafe characters", func() {
+				So(ns, ShouldContain, "root/second_f")
+				So(ns, ShouldContain, "root/third_f")
+				So(ns, ShouldContain, "root/First/uno_f")
+				So(ns, ShouldContain, "root/First/tres_f")
+			})
+		})
+
+		Convey("When NamespaceFromCompositeObject is called with  SanitizeNamespaceParts disabled for all levels", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns, SanitizeNamespaceParts(AlwaysFalse))
+
+			Convey("Then all parts of namespace at all levels should retain original contents", func() {
+				So(ns, ShouldContain, "root/second(f)")
+				So(ns, ShouldContain, "root/third[f]")
+				So(ns, ShouldContain, "root/First/uno[f]")
+				So(ns, ShouldContain, "root/First/tres(f)")
+			})
+		})
+	})
+
+	//// checking default behavior of all options
+	Convey("Given struct with nil pointers and empty maps", t, func() {
+		type delta struct {
+			Eins int
+		}
+		type uno struct {
+			Alpha bool           `json:"alpha_f"`
+			Beta  map[string]int `json:"beta_f"`
+			Gamma bool           `json:"-"`
+			Delta *delta         `json:"delta_f"`
+		}
+		type zwei struct {
+			Foo bool
+		}
+		type cuatro struct {
+			Kappa int
+			Zeta  map[string]zwei
+		}
+		m := struct {
+			First  *uno           `json:"first_f"`
+			Second map[string]int `json:"second_f"`
+			Third  int            `json:"-"`
+			Fourth map[string]cuatro
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with default options", func() {
+			ns := []string{}
+			FromCompositeObject(m, "root", &ns)
+
+			Convey("Then nil pointers should be expanded by default at all levels", func() {
+				So(ns, ShouldContain, "root/first_f/alpha_f")
+				So(ns, ShouldContain, "root/first_f/delta_f/Eins")
+			})
+
+			Convey("Then empty containers should be expanded by default at all levels", func() {
+				So(ns, ShouldContain, "root/Fourth/*/Kappa")
+				So(ns, ShouldContain, "root/Fourth/*/Zeta/*/Foo")
+			})
+
+			Convey("Then there should not be entries for containers on their own at any level", func() {
+				So(ns, ShouldNotContain, "root/first_f/beta_f")
+				So(ns, ShouldNotContain, "root/second_f")
+				So(ns, ShouldNotContain, "root/Fourth")
+				So(ns, ShouldNotContain, "root/Fourth/*/Zeta")
+			})
+
+			Convey("Then namespace should contain json names for fields rather than those from structs", func() {
+				So(ns, ShouldContain, "root/first_f/alpha_f")
+				So(ns, ShouldContain, "root/first_f/beta_f/*")
+				So(ns, ShouldContain, "root/first_f/delta_f/Eins")
+				So(ns, ShouldContain, "root/second_f/*")
+				So(ns, ShouldNotContain, "root/First/Alpha")
+				So(ns, ShouldNotContain, "root/First/Beta/*")
+				So(ns, ShouldNotContain, "root/First/Delta/Eins")
+			})
+
+			Convey("Then namespace should not contain entries hidden by json tags", func() {
+				So(ns, ShouldNotContain, "root/first_f/Gamma")
+				So(ns, ShouldNotContain, "root/Third")
+			})
+		})
+	})
+
+	//// check the correctness
+	Convey("Given nested map of maps", t, func() {
+		m := map[string]interface{}{
+			"First":  "first",
+			"Second": 13,
+			"Third": map[string]interface{}{
+				"Uno": false,
+				"Dos": map[string]interface{}{
+					"Alpha": "alpha"}}}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 4)
+			})
+
+			Convey("Then namespace should contain correct entries for all levels", func() {
+				So(ns, ShouldContain, "root/First")
+				So(ns, ShouldContain, "root/Second")
+				So(ns, ShouldContain, "root/Third/Uno")
+				So(ns, ShouldContain, "root/Third/Dos/Alpha")
+			})
+		})
+	})
+	Convey("Given map of structs", t, func() {
+		m := map[string]interface{}{
+			"First": struct {
+				Uno string
+			}{},
+			"Second": struct {
+				Tres struct {
+					Alpha string
+				}
+			}{}}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 2)
+			})
+
+			Convey("Then namespace should contain entries for nested structs", func() {
+				So(ns, ShouldContain, "root/First/Uno")
+				So(ns, ShouldContain, "root/Second/Tres/Alpha")
+			})
+		})
+	})
+
+	Convey("Given map with pointer to struct", t, func() {
+		m := map[string]interface{}{
+			"Third": &(struct {
+				Dos struct {
+					Alpha int
+				}
+			}{})}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 1)
+			})
+
+			Convey("Then namespace should contain entries for nested structs", func() {
+				So(ns, ShouldContain, "root/Third/Dos/Alpha")
+			})
+		})
+	})
+
+	Convey("Given typed empty map", t, func() {
+		m := map[string]struct{ Uno int }{}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 1)
+			})
+
+			Convey("Then namespace should contain entry for potential nested struct", func() {
+				So(ns, ShouldContain, "root/*/Uno")
+			})
+		})
+	})
+
+	Convey("Given typed map with nil pointer", t, func() {
+		type first struct {
+			Uno int
+		}
+		m := map[string]*first{"First": nil}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			//NamespaceFromCompositeObject(m, current, &ns, EntryForContainersRoot(AlwaysTrue))
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 1)
+			})
+
+			Convey("Then namespace should contain expanded entry for nil pointer's declared type", func() {
+				So(ns, ShouldContain, "root/First/Uno")
+			})
+		})
+	})
+
+	Convey("Given struct of maps", t, func() {
+		type uno struct {
+			Alpha string
+		}
+		type dos struct {
+			Beta int
+		}
+		m := struct {
+			First  map[string]*uno
+			Second map[string]dos
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 2)
+			})
+
+			Convey("Then namespace should contain expanded entries for potential entries in both maps", func() {
+				So(ns, ShouldContain, "root/First/*/Alpha")
+				So(ns, ShouldContain, "root/Second/*/Beta")
+			})
+		})
+	})
+
+	Convey("Given struct of pointers", t, func() {
+		type uno struct {
+			Alpha bool
+		}
+		m := struct {
+			First  ***int
+			Second **string
+			Third  ***uno
+		}{}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated", func() {
+				So(len(ns), ShouldEqual, 3)
+			})
+
+			Convey("Then namespace should contain expanded entries for pointed types", func() {
+				So(ns, ShouldContain, "root/First")
+				So(ns, ShouldContain, "root/Second")
+				So(ns, ShouldContain, "root/Third/Alpha")
+			})
+		})
+	})
+
+	Convey("Given struct of non-nil and nil pointers", t, func() {
+		type first struct {
+			Uno int
+		}
+		type dos struct {
+			Alpha int
+		}
+		type second struct {
+			Dos *dos
+		}
+		makeRefRef_first := func() **first {
+			ref_first := &first{}
+			return &ref_first
+		}
+		makeRefRefRef_second := func() ***second {
+			ref_second := &second{}
+			refref_second := &ref_second
+			return &refref_second
+		}
+		m := struct {
+			First  **first
+			Second ***second
+		}{
+			First:  makeRefRef_first(),
+			Second: makeRefRefRef_second()}
+
+		Convey("When NamespaceFromCompositeObject is called with  current being root", func() {
+			ns := []string{}
+			current := "root"
+			FromCompositeObject(m, current, &ns)
+
+			Convey("Then namespace should be populated with correct entries", func() {
+				So(ns, ShouldContain, "root/First/Uno")
+				So(ns, ShouldContain, "root/Second/Dos/Alpha")
+			})
+		})
+	})
+
+	Convey("Given struct with some pointers and empty maps and empty slices", t, func() {
+		type first struct {
+			Uno bool `json:"uno_f"`
+		}
+		type fourth struct {
+			Cuatro bool
+		}
+		m := struct {
+			First  *first         `json:"first_f"`
+			Second map[string]int `json:"second_f"`
+			Third  int            `json:"-"`
+			Fourth []*fourth
+		}{
+			First:  nil,
+			Fourth: []*fourth{&fourth{}, &fourth{}}}
+
+		ns := []string{}
+		FromCompositeObject(m, "root", &ns, WildcardEntryInContainer(AlwaysTrue))
+		Convey("When NamespaceFromCompositeObject is called with default options plus wildcard entry", func() {
+
+			Convey("Then namespace should contain entries for all potential exported fields", func() {
+				So(ns, ShouldContain, "root/first_f/uno_f")
+				So(ns, ShouldContain, "root/second_f/*")
+				So(ns, ShouldContain, "root/Fourth/*/Cuatro")
+				So(ns, ShouldContain, "root/Fourth/0/Cuatro")
+				So(ns, ShouldContain, "root/Fourth/1/Cuatro")
+			})
 		})
 	})
 }
