@@ -281,14 +281,14 @@ Example usage:
 
 	ns := []string{}
 	FromCompositeObject(m, "root", &ns, WildcardEntryInContainer(AlwaysTrue))
+
+    // ns contains:
+    //  "root/first_f/uno_f",
+    //  "root/second_f/*",
+    //  "root/Fourth/*/Cuatro",
+    //  "root/Fourth/0/Cuatro",
+    //  "root/Fourth/1/Cuatro"
 	
-	/* ns contains:
-  "root/first_f/uno_f",
-  "root/second_f/&ast;",
-  "root/Fourth/&ast;/Cuatro",
-  "root/Fourth/0/Cuatro",
-  "root/Fourth/1/Cuatro"
-	*/
 ```
 
 [pipeline] package
