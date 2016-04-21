@@ -52,50 +52,10 @@ var notAllowedChars = map[string][]string{
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
 func FromMap(m map[string]interface{}, current string, namespace *[]string) error {
-
-	for mkey, mval := range m {
-
-		val := reflect.ValueOf(mval)
-		typ := reflect.TypeOf(mval)
-		cur := strings.Join([]string{current, mkey}, "/")
-		switch val.Kind() {
-
-		case reflect.Map:
-			err := FromMap(
-				mval.(map[string]interface{}),
-				cur,
-				namespace)
-			if err != nil {
-				return err
-			}
-
-		case reflect.Slice, reflect.Array:
-			if typ.Elem().Kind() == reflect.Map {
-				for i := 0; i < val.Len(); i++ {
-					err := FromMap(
-						val.Index(i).Interface().(map[string]interface{}),
-						strings.Join([]string{cur, strconv.Itoa(i)}, "/"),
-						namespace)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				for i := 0; i < val.Len(); i++ {
-					*namespace = append(*namespace, strings.Join([]string{cur, strconv.Itoa(i)}, "/"))
-				}
-			}
-
-		default:
-			*namespace = append(*namespace, cur)
-		}
-	}
-
-	if len(*namespace) == 0 {
-		return fmt.Errorf("Namespace empty!")
-	}
-
-	return nil
+	return FromCompositeObject(m, current, namespace,
+		InspectNilPointers(AlwaysFalse),
+		InspectEmptyContainers(AlwaysFalse),
+		ExportJsonFieldNames(AlwaysFalse))
 }
 
 // FromJSON constructs list of namespaces from json document using json literals as namespace entries.
@@ -117,82 +77,19 @@ func FromJSON(data *[]byte, current string, namespace *[]string) error {
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
 func FromComposition(object interface{}, current string, namespace *[]string) error {
-
-	fields, err := reflections.Fields(object)
-
-	if err != nil {
-		return err
-
-	}
-
-	for _, field := range fields {
-		f, err := reflections.GetField(object, field)
-
-		if err != nil {
-			return err
-		}
-
-		val := reflect.ValueOf(f)
-		typ := reflect.TypeOf(f)
-		cur := filepath.Join(current, field)
-
-		switch reflect.ValueOf(f).Kind() {
-
-		case reflect.Struct:
-			err := FromComposition(f, cur, namespace)
-			if err != nil {
-				return err
-			}
-
-		case reflect.Slice, reflect.Array:
-			if typ.Elem().Kind() == reflect.Struct {
-				for i := 0; i < val.Len(); i++ {
-					err := FromComposition(
-						val.Index(i).Interface(),
-						filepath.Join(cur, strconv.Itoa(i)),
-						namespace)
-
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				for i := 0; i < val.Len(); i++ {
-					*namespace = append(*namespace, filepath.Join(cur, strconv.Itoa(i)))
-				}
-			}
-
-		default:
-			*namespace = append(*namespace, cur)
-		}
-	}
-
-	if len(*namespace) == 0 {
-		return fmt.Errorf("Namespace empty!")
-	}
-
-	return nil
+	return FromCompositeObject(object, current, namespace,
+		InspectNilPointers(AlwaysFalse),
+		InspectEmptyContainers(AlwaysFalse),
+		ExportJsonFieldNames(AlwaysFalse))
 }
 
 // FromCompositionTags constructs list of namespaces from multilevel struct composition using field tags as namespace entries.
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
 func FromCompositionTags(object interface{}, current string, namespace *[]string) error {
-
-	data, err := json.Marshal(object)
-
-	if err != nil {
-		return err
-	}
-
-	var jmap map[string]interface{}
-	err = json.Unmarshal(data, &jmap)
-
-	if err != nil {
-		return err
-	}
-
-	return FromMap(jmap, current, namespace)
+	return FromCompositeObject(object, current, namespace,
+		InspectNilPointers(AlwaysFalse),
+		InspectEmptyContainers(AlwaysFalse))
 }
 
 // GetValueByNamespace returns value stored in struct composition.
@@ -541,6 +438,9 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 		}
 	default:
 		saneAppendNs()
+	}
+	if len(*namespace) == 0 {
+		return fmt.Errorf("Namespace empty!")
 	}
 	return nil
 }
