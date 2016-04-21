@@ -284,8 +284,8 @@ Example usage:
 	
 	/* ns contains:
   "root/first_f/uno_f",
-  "root/second_f/*",
-  "root/Fourth/*/Cuatro",
+  "root/second_f/&ast;",
+  "root/Fourth/&ast;/Cuatro",
   "root/Fourth/0/Cuatro",
   "root/Fourth/1/Cuatro"
 	*/

@@ -281,12 +281,12 @@ func SanitizeNamespaceParts(flagFunc FlagFunc) OptionFunc {
 }
 
 const (
-	inspectNilPointers       = iota
-	inspectEmptyContainers   = iota
-	entryForContainersRoot   = iota
-	exportJsonFieldNames     = iota
-	wildcardEntryInContainer = iota
-	sanitizeNamespaceParts   = iota
+	inspectNilPointers = iota
+	inspectEmptyContainers
+	entryForContainersRoot
+	exportJsonFieldNames
+	wildcardEntryInContainer
+	sanitizeNamespaceParts
 )
 
 // CompositeObjectToNs inspects an object to construct a list of paths to data.
