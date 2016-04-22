@@ -30,6 +30,14 @@ import (
 	"github.com/oleiade/reflections"
 )
 
+type FlagFunc (func(nsPath string, itemKind reflect.Type) bool)
+
+// FlagFunc is invoked to determine flag value at position in namespace
+
+type OptionFunc (func() (int, FlagFunc))
+
+// OptionFunc is used to attach flag functions for specific flags
+
 //notAllowedChars array with not allowed characters in namespace
 var notAllowedChars = map[string][]string{
 	"brackets":     {"(", ")", "[", "]", "{", "}"},
@@ -44,50 +52,10 @@ var notAllowedChars = map[string][]string{
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
 func FromMap(m map[string]interface{}, current string, namespace *[]string) error {
-
-	for mkey, mval := range m {
-
-		val := reflect.ValueOf(mval)
-		typ := reflect.TypeOf(mval)
-		cur := strings.Join([]string{current, mkey}, "/")
-		switch val.Kind() {
-
-		case reflect.Map:
-			err := FromMap(
-				mval.(map[string]interface{}),
-				cur,
-				namespace)
-			if err != nil {
-				return err
-			}
-
-		case reflect.Slice, reflect.Array:
-			if typ.Elem().Kind() == reflect.Map {
-				for i := 0; i < val.Len(); i++ {
-					err := FromMap(
-						val.Index(i).Interface().(map[string]interface{}),
-						strings.Join([]string{cur, strconv.Itoa(i)}, "/"),
-						namespace)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				for i := 0; i < val.Len(); i++ {
-					*namespace = append(*namespace, strings.Join([]string{cur, strconv.Itoa(i)}, "/"))
-				}
-			}
-
-		default:
-			*namespace = append(*namespace, cur)
-		}
-	}
-
-	if len(*namespace) == 0 {
-		return fmt.Errorf("Namespace empty!")
-	}
-
-	return nil
+	return FromCompositeObject(m, current, namespace,
+		InspectNilPointers(AlwaysFalse),
+		InspectEmptyContainers(AlwaysFalse),
+		ExportJsonFieldNames(AlwaysFalse))
 }
 
 // FromJSON constructs list of namespaces from json document using json literals as namespace entries.
@@ -109,82 +77,19 @@ func FromJSON(data *[]byte, current string, namespace *[]string) error {
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
 func FromComposition(object interface{}, current string, namespace *[]string) error {
-
-	fields, err := reflections.Fields(object)
-
-	if err != nil {
-		return err
-
-	}
-
-	for _, field := range fields {
-		f, err := reflections.GetField(object, field)
-
-		if err != nil {
-			return err
-		}
-
-		val := reflect.ValueOf(f)
-		typ := reflect.TypeOf(f)
-		cur := filepath.Join(current, field)
-
-		switch reflect.ValueOf(f).Kind() {
-
-		case reflect.Struct:
-			err := FromComposition(f, cur, namespace)
-			if err != nil {
-				return err
-			}
-
-		case reflect.Slice, reflect.Array:
-			if typ.Elem().Kind() == reflect.Struct {
-				for i := 0; i < val.Len(); i++ {
-					err := FromComposition(
-						val.Index(i).Interface(),
-						filepath.Join(cur, strconv.Itoa(i)),
-						namespace)
-
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				for i := 0; i < val.Len(); i++ {
-					*namespace = append(*namespace, filepath.Join(cur, strconv.Itoa(i)))
-				}
-			}
-
-		default:
-			*namespace = append(*namespace, cur)
-		}
-	}
-
-	if len(*namespace) == 0 {
-		return fmt.Errorf("Namespace empty!")
-	}
-
-	return nil
+	return FromCompositeObject(object, current, namespace,
+		InspectNilPointers(AlwaysFalse),
+		InspectEmptyContainers(AlwaysFalse),
+		ExportJsonFieldNames(AlwaysFalse))
 }
 
 // FromCompositionTags constructs list of namespaces from multilevel struct composition using field tags as namespace entries.
 // 'Current' value is prefixed to all namespace elements.
 // It returns nil in case of success or error if building namespaces failed.
 func FromCompositionTags(object interface{}, current string, namespace *[]string) error {
-
-	data, err := json.Marshal(object)
-
-	if err != nil {
-		return err
-	}
-
-	var jmap map[string]interface{}
-	err = json.Unmarshal(data, &jmap)
-
-	if err != nil {
-		return err
-	}
-
-	return FromMap(jmap, current, namespace)
+	return FromCompositeObject(object, current, namespace,
+		InspectNilPointers(AlwaysFalse),
+		InspectEmptyContainers(AlwaysFalse))
 }
 
 // GetValueByNamespace returns value stored in struct composition.
@@ -269,6 +174,273 @@ func ValidateMetricNamespacePart(ns string) error {
 				return fmt.Errorf("Namespace contains not allowed chars, namespace part: %s, not allowed char: %s", ns, ch)
 			}
 		}
+	}
+	return nil
+}
+
+// getJsonFieldName gets an object's field name compatible with json tag on;
+// details can be found in docs for pkg  json. If json tag is empty, or no
+// tag is present then original  fieldName will be reported. If json tag hides
+// a field, function will return dash "-" as name.
+func getJsonFieldName(object interface{}, fieldName string) (string, error) {
+	jsonTag, err := reflections.GetFieldTag(object, fieldName, "json")
+	if err != nil {
+		return "", err
+	} else if jsonTag == "" {
+		return fieldName, nil
+	}
+	i := strings.Index(jsonTag, ",")
+	if i == -1 {
+		return jsonTag, nil
+	}
+	if tag := jsonTag[:i]; tag == "-" {
+		return "-", nil
+	} else if tag == "" {
+		return fieldName, nil
+	} else {
+		return tag, nil
+	}
+}
+
+func AlwaysTrue(_ string, _ reflect.Type) bool {
+	return true
+}
+
+func AlwaysFalse(_ string, _ reflect.Type) bool {
+	return false
+}
+
+// InspectNilPointers option controls NS expansion for nil pointers.
+//
+// If InspectNilPointers returns  true for nil pointer at some path in ns,
+// ns will be expanded for pointer's original type
+func InspectNilPointers(flagFunc FlagFunc) OptionFunc {
+	return func() (int, FlagFunc) {
+		return inspectNilPointers, flagFunc
+	}
+}
+
+// InspectEmptyContainers option controls NS expansion for empty maps.
+//
+// If InspectEmptyContainers returns  true for map at some path in ns, ns will
+// be expanded for map's value type
+func InspectEmptyContainers(flagFunc FlagFunc) OptionFunc {
+	return func() (int, FlagFunc) {
+		return inspectEmptyContainers, flagFunc
+	}
+}
+
+// EntryForContainersRoot controls inserting entries for containers themselves.
+//
+// If EntryForContainersRoot returns  true for container at some path in ns,
+// ns will contain entry for a container itself.
+func EntryForContainersRoot(flagFunc FlagFunc) OptionFunc {
+	return func() (int, FlagFunc) {
+		return entryForContainersRoot, flagFunc
+	}
+}
+
+// ExportJsonFieldNames option controls naming fields of struct where field is
+// annotated with json tag.
+//
+// If ExportJsonFieldNames returns  true for struct at some path in ns, json
+// name for all fields will be used rather than fields' own names. If json tag
+// contains dash ('-') for any field, field won't be exported.
+func ExportJsonFieldNames(flagFunc FlagFunc) OptionFunc {
+	return func() (int, FlagFunc) {
+		return exportJsonFieldNames, flagFunc
+	}
+}
+
+// WildcardEntryInContainer controls adding a wildcard for inspected non-empty
+// containers.
+//
+// If WildcardEntryInContainer returns  true for non-empty container
+// (map/ slice/ array) at some path in ns, a wildcard entry will be reported
+// for container and the containers' value type will be inspected in depth.
+//
+// See also: InspectEmptyContainers
+func WildcardEntryInContainer(flagFunc FlagFunc) OptionFunc {
+	return func() (int, FlagFunc) {
+		return wildcardEntryInContainer, flagFunc
+	}
+}
+
+// SanitizeNamespaceParts controls sanitizing namespace parts in generated
+// namespace.
+//
+// If SanitizeNamespaceParts returns  true for object at some path in ns, all
+// child keys of that object (fields, map keys) will have their names
+// sanitized, ie. all the invalid characters removed.
+//
+// See also: ns.ReplaceNotAllowedCharsInNamespacePart
+func SanitizeNamespaceParts(flagFunc FlagFunc) OptionFunc {
+	return func() (int, FlagFunc) {
+		return sanitizeNamespaceParts, flagFunc
+	}
+}
+
+const (
+	inspectNilPointers = iota
+	inspectEmptyContainers
+	entryForContainersRoot
+	exportJsonFieldNames
+	wildcardEntryInContainer
+	sanitizeNamespaceParts
+)
+
+// CompositeObjectToNs inspects an object to construct a list of paths to data.
+//
+// Operation of this method is controlled by options, which default to:
+// 	InspectEmptyContainers(AlwaysTrue),
+// 	InspectNilPointers(AlwaysTrue),
+// 	EntryForContainersRoot(AlwaysFalse),
+// 	ExportJsonFieldNames(AlwaysTrue),
+// 	WildcardEntryInContainer(AlwaysFalse),
+//	SanitizeNamespaceParts(AlwaysTrue).
+// Different options may be specified to implement selective and
+// context-sensitive inspection.
+func FromCompositeObject(object interface{}, current string, namespace *[]string, options ...OptionFunc) error {
+	flags := map[int]FlagFunc{}
+	options = append([]OptionFunc{
+		InspectEmptyContainers(AlwaysTrue),
+		InspectNilPointers(AlwaysTrue),
+		EntryForContainersRoot(AlwaysFalse),
+		ExportJsonFieldNames(AlwaysTrue),
+		WildcardEntryInContainer(AlwaysFalse),
+		SanitizeNamespaceParts(AlwaysTrue)}, options...)
+	for _, option := range options {
+		key, filter := option()
+		flags[key] = filter
+	}
+	return fromCompositeObject(object, current, namespace, flags)
+}
+
+func fromCompositeObject(object interface{}, current string, namespace *[]string, flags map[int]FlagFunc) error {
+	val := reflect.Indirect(reflect.ValueOf(object))
+	saneAppendNs := func() {
+		if current != "" {
+			*namespace = append(*namespace, current)
+		}
+	}
+	safeExtendNs := func(part string) string {
+		if flags[sanitizeNamespaceParts](current, val.Type()) {
+			return filepath.Join(current, ReplaceNotAllowedCharsInNamespacePart(part))
+		}
+		return filepath.Join(current, part)
+	}
+	regularExtendNs := func(part string) string {
+		return filepath.Join(current, part)
+	}
+
+	switch val.Kind() {
+	case reflect.Invalid:
+		val = reflect.ValueOf(object)
+		if val.Kind() != reflect.Ptr || !val.IsNil() {
+			return nil
+		}
+		if false == flags[inspectNilPointers](current, val.Type()) {
+			return nil
+		}
+		nuObj := reflect.Zero(val.Type().Elem())
+		if err := fromCompositeObject(nuObj.Interface(), current, namespace, flags); err != nil {
+			return err
+		}
+		return nil
+	case reflect.Ptr:
+		return fromCompositeObject(val.Interface(), current, namespace, flags)
+	case reflect.Map:
+		if true == flags[entryForContainersRoot](current, val.Type()) {
+			saneAppendNs()
+		}
+		wildcardEntryInContainer := flags[wildcardEntryInContainer](current, val.Type())
+		if val.Len() == 0 || wildcardEntryInContainer {
+			if !wildcardEntryInContainer && false == flags[inspectEmptyContainers](current, val.Type()) {
+				return nil
+			}
+			typ := reflect.TypeOf(object)
+			nuObj := reflect.Zero(typ.Elem()).Interface()
+			if err := fromCompositeObject(
+				nuObj,
+				regularExtendNs("*"),
+				namespace,
+				flags); err != nil {
+				return err
+			}
+		}
+
+		for _, mkey := range val.MapKeys() {
+			if err := fromCompositeObject(
+				val.MapIndex(mkey).Interface(),
+				safeExtendNs(mkey.String()),
+				namespace,
+				flags); err != nil {
+				return err
+			}
+		}
+	case reflect.Array, reflect.Slice:
+		if true == flags[entryForContainersRoot](current, val.Type()) {
+			saneAppendNs()
+		}
+		wildcardEntryInContainer := flags[wildcardEntryInContainer](current, val.Type())
+		if val.Len() == 0 || wildcardEntryInContainer {
+			if !wildcardEntryInContainer && false == flags[inspectEmptyContainers](current, val.Type()) {
+				return nil
+			}
+			typ := reflect.TypeOf(object)
+			nuObj := reflect.Zero(typ.Elem()).Interface()
+			if err := fromCompositeObject(
+				nuObj,
+				regularExtendNs("*"),
+				namespace,
+				flags); err != nil {
+				return err
+			}
+		}
+		for i := 0; i < val.Len(); i++ {
+			if err := fromCompositeObject(val.Index(i).Interface(),
+				regularExtendNs(strconv.Itoa(i)),
+				namespace,
+				flags); err != nil {
+				return err
+			}
+		}
+	case reflect.Struct:
+		if true == flags[entryForContainersRoot](current, val.Type()) {
+			saneAppendNs()
+		}
+		fields, err := reflections.Fields(object)
+		if err != nil {
+			return err
+		}
+		exportJsonFieldNamesHere := flags[exportJsonFieldNames](current, val.Type())
+		for _, field := range fields {
+			f, err := reflections.GetField(object, field)
+			if err != nil {
+				return err
+			}
+			fieldName := field
+			if true == exportJsonFieldNamesHere {
+				jsonField, err := getJsonFieldName(object, field)
+				if err != nil {
+					return err
+				}
+				// hidden field - skip it
+				if jsonField == "-" {
+					continue
+				}
+				fieldName = jsonField
+			}
+			nuCurrent := safeExtendNs(fieldName)
+			if err := fromCompositeObject(f, nuCurrent, namespace, flags); err != nil {
+				return err
+			}
+		}
+	default:
+		saneAppendNs()
+	}
+	if len(*namespace) == 0 {
+		return fmt.Errorf("Namespace empty!")
 	}
 	return nil
 }
