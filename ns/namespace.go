@@ -28,6 +28,8 @@ import (
 	"strings"
 
 	"github.com/oleiade/reflections"
+
+	"github.com/intelsdi-x/snap-plugin-utilities/str"
 )
 
 type FlagFunc (func(nsPath string, itemKind reflect.Type) bool)
@@ -320,7 +322,9 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 	val := reflect.Indirect(reflect.ValueOf(object))
 	saneAppendNs := func() {
 		if current != "" {
-			*namespace = append(*namespace, current)
+			if !str.Contains(*namespace, current) {
+				*namespace = append(*namespace, current)
+			}
 		}
 	}
 	safeExtendNs := func(part string) string {

@@ -138,7 +138,7 @@ func GetConfigItem(config interface{}, name string) (interface{}, error) {
 
 // GetConfigItems returns map to values of multiple  configuration items defined in Global Config or Metrics Config
 // Notes: GetConfigItems() will be helpful to access and and get multiple configuration items' values, both in GetMetricTypes() and CollectMetrics()
-func GetConfigItems(config interface{}, names []string) (map[string]interface{}, error) {
+func GetConfigItems(config interface{}, names ...string) (map[string]interface{}, error) {
 
 	switch config.(type) {
 	case plugin.PluginConfigType:
