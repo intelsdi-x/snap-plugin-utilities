@@ -440,5 +440,6 @@ snap, along with this plugin, is an Open Source software released under the Apac
 
 * Author: [Izabella Raulin](https://github.com/IzabellaRaulin)
 * Author: [Marcin Krolik](https://github.com/marcin-krolik)
+* Author: [Marcin Olszewski] (https://github.com/marcintao)
 
 **Thank you!** Your contribution is incredibly important to us.
