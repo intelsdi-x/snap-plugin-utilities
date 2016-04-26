@@ -370,7 +370,7 @@ func TestConfigItems(t *testing.T) {
 			cfg.AddItem("dummy_int", ctypes.ConfigValueInt{Value: dummy_int})
 			cfg.AddItem("dummy_float", ctypes.ConfigValueFloat{Value: dummy_float})
 
-			result, err := GetConfigItems(cfg, names)
+			result, err := GetConfigItems(cfg, names...)
 			So(err, ShouldBeNil)
 			for _, name := range names {
 				So(result[name], ShouldNotBeEmpty)
@@ -389,7 +389,7 @@ func TestConfigItems(t *testing.T) {
 			metric := plugin.PluginMetricType{}
 			metric.Config_ = config
 
-			result, err := GetConfigItems(metric, names)
+			result, err := GetConfigItems(metric, names...)
 			So(err, ShouldBeNil)
 			for _, name := range names {
 				So(result[name], ShouldNotBeEmpty)
@@ -399,7 +399,7 @@ func TestConfigItems(t *testing.T) {
 
 	Convey("Try to get values of items from invalid config (unsupported type)", t, func() {
 		invalid_cfg := []string{"invalid", "config", "source"}
-		result, err := GetConfigItems(invalid_cfg, names)
+		result, err := GetConfigItems(invalid_cfg, names...)
 		So(err, ShouldNotBeNil)
 		So(result, ShouldBeNil)
 	})
