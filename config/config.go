@@ -57,7 +57,7 @@ func getConfigItemValue(item ctypes.ConfigValue) (interface{}, error) {
 
 // GetGlobalConfigItem returns value of config item specified by `name` defined in Plugin Global Config
 // Notes: GetGlobalConfigItem() will be helpful to access and get configuration item's value in GetMetricTypes()
-func GetGlobalConfigItem(cfg plugin.PluginConfigType, name string) (interface{}, error) {
+func GetGlobalConfigItem(cfg plugin.ConfigType, name string) (interface{}, error) {
 
 	if item, ok := cfg.Table()[name]; ok {
 		return getConfigItemValue(item)
@@ -68,7 +68,7 @@ func GetGlobalConfigItem(cfg plugin.PluginConfigType, name string) (interface{},
 
 // GetGlobalConfigItems returns map to values of multiple configuration items defined in Plugin Global Config and specified in 'names' slice
 // Notes: GetGlobalConfigItems() will be helpful to access and get multiple configuration items' values in GetMetricTypes()
-func GetGlobalConfigItems(cfg plugin.PluginConfigType, names []string) (map[string]interface{}, error) {
+func GetGlobalConfigItems(cfg plugin.ConfigType, names []string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	for _, name := range names {
@@ -90,7 +90,7 @@ func GetGlobalConfigItems(cfg plugin.PluginConfigType, names []string) (map[stri
 // GetMetricConfigItem returns value of configuration item specified by `name` defined in Metrics Config
 // Notes: GetMetricConfigItem() will be helpful to access and get configuration item's value in CollectMetrics()
 // (Plugin Global Config is merged into Metric Config)
-func GetMetricConfigItem(metric plugin.PluginMetricType, name string) (interface{}, error) {
+func GetMetricConfigItem(metric plugin.MetricType, name string) (interface{}, error) {
 
 	if item, ok := metric.Config().Table()[name]; ok {
 		return getConfigItemValue(item)
@@ -102,7 +102,7 @@ func GetMetricConfigItem(metric plugin.PluginMetricType, name string) (interface
 // GetMetricConfigItems returns map to values of multiple configuration items defined in Metric Config and specified in 'names' slice
 // Notes: GetMetricConfigItems() will be helpful to access and get multiple configuration items' values in CollectMetrics()
 // (Plugin Global Config is merged into Metric Config)
-func GetMetricConfigItems(metric plugin.PluginMetricType, names []string) (map[string]interface{}, error) {
+func GetMetricConfigItems(metric plugin.MetricType, names []string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	for _, name := range names {
@@ -126,11 +126,11 @@ func GetMetricConfigItems(metric plugin.PluginMetricType, names []string) (map[s
 func GetConfigItem(config interface{}, name string) (interface{}, error) {
 
 	switch config.(type) {
-	case plugin.PluginConfigType:
-		return GetGlobalConfigItem(config.(plugin.PluginConfigType), name)
+	case plugin.ConfigType:
+		return GetGlobalConfigItem(config.(plugin.ConfigType), name)
 
-	case plugin.PluginMetricType:
-		return GetMetricConfigItem(config.(plugin.PluginMetricType), name)
+	case plugin.MetricType:
+		return GetMetricConfigItem(config.(plugin.MetricType), name)
 	}
 
 	return nil, fmt.Errorf("Unsupported type of config. Input 'config' needs to be PluginConfigType or PluginMetricType")
@@ -141,11 +141,11 @@ func GetConfigItem(config interface{}, name string) (interface{}, error) {
 func GetConfigItems(config interface{}, names ...string) (map[string]interface{}, error) {
 
 	switch config.(type) {
-	case plugin.PluginConfigType:
-		return GetGlobalConfigItems(config.(plugin.PluginConfigType), names)
+	case plugin.ConfigType:
+		return GetGlobalConfigItems(config.(plugin.ConfigType), names)
 
-	case plugin.PluginMetricType:
-		return GetMetricConfigItems(config.(plugin.PluginMetricType), names)
+	case plugin.MetricType:
+		return GetMetricConfigItems(config.(plugin.MetricType), names)
 	}
 
 	return nil, fmt.Errorf("Unsupported type of config. Input 'config' needs to be PluginConfigType or PluginMetricType")

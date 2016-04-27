@@ -138,7 +138,7 @@ func TestGetMetricConfigItem(t *testing.T) {
 		config.AddItem("dummy_float", ctypes.ConfigValueFloat{Value: dummy_float})
 
 		// create metric and set config
-		metric := plugin.PluginMetricType{}
+		metric := plugin.MetricType{}
 		metric.Config_ = config
 
 		Convey("string type of item", func() {
@@ -169,7 +169,7 @@ func TestGetMetricConfigItem(t *testing.T) {
 	Convey("Try to get a value of items not defined in Metrics Config", t, func() {
 		config := cdata.NewNode()
 		config.AddItem("foo", ctypes.ConfigValueStr{Value: "foo_val"})
-		metric := plugin.PluginMetricType{}
+		metric := plugin.MetricType{}
 		metric.Config_ = config
 
 		result, err := GetMetricConfigItem(metric, "foo_not_exist")
@@ -178,7 +178,7 @@ func TestGetMetricConfigItem(t *testing.T) {
 	})
 
 	Convey("No item defined in Metrics Config", t, func() {
-		metric := plugin.PluginMetricType{}
+		metric := plugin.MetricType{}
 		metric.Config_ = cdata.NewNode()
 
 		result, err := GetMetricConfigItem(metric, "foo")
@@ -199,7 +199,7 @@ func TestGetMetricConfigItems(t *testing.T) {
 		config.AddItem("dummy_float", ctypes.ConfigValueFloat{Value: dummy_float})
 
 		// create metric and set config
-		metric := plugin.PluginMetricType{}
+		metric := plugin.MetricType{}
 		metric.Config_ = config
 
 		names := []string{"dummy_string", "dummy_bool", "dummy_int", "dummy_float"}
@@ -214,7 +214,7 @@ func TestGetMetricConfigItems(t *testing.T) {
 	Convey("Try to get values of items not defined in Metrics config", t, func() {
 		config := cdata.NewNode()
 		config.AddItem("foo", ctypes.ConfigValueStr{Value: "foo_val"})
-		metric := plugin.PluginMetricType{}
+		metric := plugin.MetricType{}
 		metric.Config_ = config
 
 		names := []string{"foo1", "foo2"}
@@ -224,7 +224,7 @@ func TestGetMetricConfigItems(t *testing.T) {
 	})
 
 	Convey("No item defined in Metrics Config", t, func() {
-		metric := plugin.PluginMetricType{}
+		metric := plugin.MetricType{}
 		metric.Config_ = cdata.NewNode()
 		names := []string{"foo", "bar"}
 		result, err := GetMetricConfigItems(metric, names)
@@ -279,7 +279,7 @@ func TestConfigItem(t *testing.T) {
 			config.AddItem("dummy_float", ctypes.ConfigValueFloat{Value: dummy_float})
 
 			// create metric and set config
-			metric := plugin.PluginMetricType{}
+			metric := plugin.MetricType{}
 			metric.Config_ = config
 
 			Convey("string type of item", func() {
@@ -313,7 +313,7 @@ func TestConfigItem(t *testing.T) {
 		Convey("Source: metrics config", func() {
 			config := cdata.NewNode()
 			config.AddItem("foo", ctypes.ConfigValueStr{Value: "foo_val"})
-			metric := plugin.PluginMetricType{}
+			metric := plugin.MetricType{}
 			metric.Config_ = config
 			result, err := GetMetricConfigItem(metric, "foo_not_exist")
 			So(err, ShouldNotBeNil)
@@ -333,7 +333,7 @@ func TestConfigItem(t *testing.T) {
 	Convey("No item defined in config", t, func() {
 
 		Convey("Source: metrics config", func() {
-			metric := plugin.PluginMetricType{}
+			metric := plugin.MetricType{}
 			metric.Config_ = cdata.NewNode()
 			result, err := GetMetricConfigItem(metric, "foo")
 			So(err, ShouldNotBeNil)
@@ -386,7 +386,7 @@ func TestConfigItems(t *testing.T) {
 			config.AddItem("dummy_float", ctypes.ConfigValueFloat{Value: dummy_float})
 
 			// create metric and set config
-			metric := plugin.PluginMetricType{}
+			metric := plugin.MetricType{}
 			metric.Config_ = config
 
 			result, err := GetConfigItems(metric, names...)
