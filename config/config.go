@@ -49,7 +49,7 @@ func getConfigItemValue(item ctypes.ConfigValue) (interface{}, error) {
 		break
 
 	default:
-		return nil, fmt.Errorf("Unsupported type of configuration item, type=%+v", item.Type())
+		return nil, fmt.Errorf("Unsupported type of configuration item, type=%v", item.Type())
 	}
 
 	return value, nil
@@ -59,11 +59,13 @@ func getConfigItemValue(item ctypes.ConfigValue) (interface{}, error) {
 // Notes: GetGlobalConfigItem() will be helpful to access and get configuration item's value in GetMetricTypes()
 func GetGlobalConfigItem(cfg plugin.ConfigType, name string) (interface{}, error) {
 
-	if item, ok := cfg.Table()[name]; ok {
-		return getConfigItemValue(item)
+	if cfg.ConfigDataNode != nil && len(cfg.Table()) > 0 {
+		if item, ok := cfg.Table()[name]; ok {
+			return getConfigItemValue(item)
+		}
 	}
 
-	return nil, fmt.Errorf("Cannot find %+v in Global Config", name)
+	return nil, fmt.Errorf("Cannot find %v in Global Config", name)
 }
 
 // GetGlobalConfigItems returns map to values of multiple configuration items defined in Plugin Global Config and specified in 'names' slice
@@ -72,16 +74,20 @@ func GetGlobalConfigItems(cfg plugin.ConfigType, names []string) (map[string]int
 	result := make(map[string]interface{})
 
 	for _, name := range names {
-		item, ok := cfg.Table()[name]
-		if !ok {
-			return nil, fmt.Errorf("Cannot find %+v in Global Config", name)
-		}
+		if cfg.ConfigDataNode != nil && len(cfg.Table()) > 0 {
+			item, ok := cfg.Table()[name]
+			if !ok {
+				return nil, fmt.Errorf("Cannot find %v in Global Config", name)
+			}
 
-		val, err := getConfigItemValue(item)
-		if err != nil {
-			return nil, err
+			val, err := getConfigItemValue(item)
+			if err != nil {
+				return nil, err
+			}
+			result[name] = val
+		} else {
+			return nil, fmt.Errorf("Cannot find %v in Global Config", name)
 		}
-		result[name] = val
 	}
 
 	return result, nil
@@ -91,12 +97,13 @@ func GetGlobalConfigItems(cfg plugin.ConfigType, names []string) (map[string]int
 // Notes: GetMetricConfigItem() will be helpful to access and get configuration item's value in CollectMetrics()
 // (Plugin Global Config is merged into Metric Config)
 func GetMetricConfigItem(metric plugin.MetricType, name string) (interface{}, error) {
-
-	if item, ok := metric.Config().Table()[name]; ok {
-		return getConfigItemValue(item)
+	if metric.Config() != nil && len(metric.Config().Table()) > 0 {
+		if item, ok := metric.Config().Table()[name]; ok {
+			return getConfigItemValue(item)
+		}
 	}
 
-	return nil, fmt.Errorf("Cannot find %+v in Metrics Config", name)
+	return nil, fmt.Errorf("Cannot find %v in Metrics Config", name)
 }
 
 // GetMetricConfigItems returns map to values of multiple configuration items defined in Metric Config and specified in 'names' slice
@@ -106,16 +113,20 @@ func GetMetricConfigItems(metric plugin.MetricType, names []string) (map[string]
 	result := make(map[string]interface{})
 
 	for _, name := range names {
-		item, ok := metric.Config().Table()[name]
-		if !ok {
-			return nil, fmt.Errorf("Cannot find %+v in Metrics Config", name)
-		}
+		if metric.Config() != nil && len(metric.Config().Table()) > 0 {
+			item, ok := metric.Config().Table()[name]
+			if !ok {
+				return nil, fmt.Errorf("Cannot find %v in Metrics Config", name)
+			}
 
-		val, err := getConfigItemValue(item)
-		if err != nil {
-			return nil, err
+			val, err := getConfigItemValue(item)
+			if err != nil {
+				return nil, err
+			}
+			result[name] = val
+		} else {
+			return nil, fmt.Errorf("Cannot find %v in Metrics Config", name)
 		}
-		result[name] = val
 	}
 
 	return result, nil
