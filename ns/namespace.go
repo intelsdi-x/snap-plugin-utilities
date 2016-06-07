@@ -142,6 +142,13 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
 					return GetValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
 				}
+			case reflect.Ptr:
+				val = reflect.ValueOf(val).Elem().Interface()
+				if len(ns) == 1 {
+					return val
+				} else {
+					return GetValueByNamespace(val, ns[1:])
+				}
 			default:
 				// last ns, return value found
 				if len(ns) == 1 {

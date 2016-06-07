@@ -1270,3 +1270,54 @@ func TestFromCompositeObject(t *testing.T) {
 		})
 	})
 }
+
+func TestGetValueByNamespace(t *testing.T) {
+	Convey("Given some nested structs, use a namespace to return the correct values", t, func() {
+		dataTwo := new(float64)
+		nestedDataTwo := new(float64)
+		nestedDataThree := new(float32)
+		*dataTwo = 3.14
+		*nestedDataTwo = 99.99
+		*nestedDataThree = 20.0
+
+		type bar struct {
+			NestedDataOne   uint32   `json:"nested_data_one,omitempty"`
+			NestedDataTwo   *float64 `json:"nested_data_two,omitempty"`
+			NestedDataThree *float32 `json:"nested_data_three,omitempty"`
+		}
+		type foo struct {
+			DataOne   uint32   `json:"data_one,omitempty"`
+			DataTwo   *float64 `json:"data_two,omitempty"`
+			DataThree *bar     `json:"data_three,omitempty"`
+		}
+		m := struct {
+			ID   string `json:"id"`
+			Data *foo   `json:"data"`
+		}{
+			ID: "FooID-12345",
+			Data: &foo{
+				DataOne: 127,
+				DataTwo: dataTwo,
+				DataThree: &bar{
+					NestedDataOne:   254,
+					NestedDataTwo:   nestedDataTwo,
+					NestedDataThree: nestedDataThree,
+				},
+			},
+		}
+
+		namespaces := [][]string{
+			[]string{"data_one"},
+			[]string{"data_two"},
+			[]string{"data_three", "nested_data_one"},
+			[]string{"data_three", "nested_data_two"},
+			[]string{"data_three", "nested_data_three"},
+		}
+
+		So(GetValueByNamespace(m.Data, namespaces[0]), ShouldEqual, 127)
+		So(GetValueByNamespace(m.Data, namespaces[1]), ShouldEqual, 3.14)
+		So(GetValueByNamespace(m.Data, namespaces[2]), ShouldEqual, 254)
+		So(GetValueByNamespace(m.Data, namespaces[3]), ShouldEqual, 99.99)
+		So(GetValueByNamespace(m.Data, namespaces[4]), ShouldEqual, 20.0)
+	})
+}
