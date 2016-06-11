@@ -143,11 +143,17 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 					return GetValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
 				}
 			case reflect.Ptr:
-				val = reflect.ValueOf(val).Elem().Interface()
+				v := reflect.Indirect(reflect.ValueOf(val))
+				if !v.IsValid() || !v.CanInterface() {
+					// If reflect can't call Interface() on v, we can't go deeper even if
+					// len(ns) > 1. Therefore, we should just return nil here.
+					return nil
+				}
+
 				if len(ns) == 1 {
-					return val
+					return v.Interface()
 				} else {
-					return GetValueByNamespace(val, ns[1:])
+					return GetValueByNamespace(v.Interface(), ns[1:])
 				}
 			default:
 				// last ns, return value found
