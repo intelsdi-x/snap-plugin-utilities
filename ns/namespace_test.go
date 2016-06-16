@@ -1272,7 +1272,7 @@ func TestFromCompositeObject(t *testing.T) {
 }
 
 func TestGetValueByNamespace(t *testing.T) {
-	Convey("Given some nested structs, use a namespace to return the correct values", t, func() {
+	Convey("When GetValueByNamespace is given some nested structs", t, func() {
 		dataTwo := new(float64)
 		nestedDataTwo := new(float64)
 		nestedDataThree := new(float32)
@@ -1291,10 +1291,12 @@ func TestGetValueByNamespace(t *testing.T) {
 			DataThree *bar     `json:"data_three,omitempty"`
 		}
 		m := struct {
-			ID   string `json:"id"`
-			Data *foo   `json:"data"`
+			ID      string      `json:"id"`
+			Invalid interface{} `json:"invalid"`
+			Data    *foo        `json:"data"`
 		}{
-			ID: "FooID-12345",
+			ID:      "FooID-12345",
+			Invalid: new(interface{}),
 			Data: &foo{
 				DataOne: 127,
 				DataTwo: dataTwo,
@@ -1306,18 +1308,24 @@ func TestGetValueByNamespace(t *testing.T) {
 			},
 		}
 
-		namespaces := [][]string{
-			[]string{"data_one"},
-			[]string{"data_two"},
-			[]string{"data_three", "nested_data_one"},
-			[]string{"data_three", "nested_data_two"},
-			[]string{"data_three", "nested_data_three"},
-		}
+		Convey("Should return values contained in the struct by a given namespace", func() {
+			namespaces := [][]string{
+				[]string{"data_one"},
+				[]string{"data_two"},
+				[]string{"data_three", "nested_data_one"},
+				[]string{"data_three", "nested_data_two"},
+				[]string{"data_three", "nested_data_three"},
+			}
 
-		So(GetValueByNamespace(m.Data, namespaces[0]), ShouldEqual, 127)
-		So(GetValueByNamespace(m.Data, namespaces[1]), ShouldEqual, 3.14)
-		So(GetValueByNamespace(m.Data, namespaces[2]), ShouldEqual, 254)
-		So(GetValueByNamespace(m.Data, namespaces[3]), ShouldEqual, 99.99)
-		So(GetValueByNamespace(m.Data, namespaces[4]), ShouldEqual, 20.0)
+			So(GetValueByNamespace(m.Data, namespaces[0]), ShouldEqual, 127)
+			So(GetValueByNamespace(m.Data, namespaces[1]), ShouldEqual, 3.14)
+			So(GetValueByNamespace(m.Data, namespaces[2]), ShouldEqual, 254)
+			So(GetValueByNamespace(m.Data, namespaces[3]), ShouldEqual, 99.99)
+			So(GetValueByNamespace(m.Data, namespaces[4]), ShouldEqual, 20.0)
+		})
+
+		Convey("Should not attempt to interface a zero value", func() {
+			So(func() { GetValueByNamespace(m, []string{"invalid"}) }, ShouldNotPanic)
+		})
 	})
 }
