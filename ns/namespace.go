@@ -22,14 +22,14 @@ package ns
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/oleiade/reflections"
-
 	"github.com/intelsdi-x/snap-plugin-utilities/str"
+	"github.com/oleiade/reflections"
 )
 
 type FlagFunc (func(nsPath string, itemKind reflect.Type) bool)
@@ -102,14 +102,14 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 	current := ns[0]
 	fields, err := reflections.Fields(object)
 	if err != nil {
-		fmt.Printf("Could not return fields for object{%v}\n", object)
+		fmt.Fprintf(os.Stderr, "Could not return fields for object{%v}\n", object)
 		return nil
 	}
 
 	for _, field := range fields {
 		tag, err := reflections.GetFieldTag(object, field, "json")
 		if err != nil {
-			fmt.Printf("Could not find tag for field{%s}\n", field)
+			fmt.Fprintf(os.Stderr, "Could not find tag for field{%s}\n", field)
 			return nil
 		}
 		// remove omitempty from tag
@@ -117,7 +117,7 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 		if tag == current {
 			val, err := reflections.GetField(object, field)
 			if err != nil {
-				fmt.Printf("Could not retrieve field{%s}\n", field)
+				fmt.Fprintf(os.Stderr, "Could not retrieve field{%s}\n", field)
 				return nil
 			}
 			// handling of special cases for slice and map
