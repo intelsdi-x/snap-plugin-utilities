@@ -1328,4 +1328,60 @@ func TestGetValueByNamespace(t *testing.T) {
 			So(func() { GetValueByNamespace(m, []string{"invalid"}) }, ShouldNotPanic)
 		})
 	})
+
+	Convey("When GetValueByNamespace is given some nested map", t, func() {
+
+		Foo := map[string]interface{}{"Foos": "foos", "Boos": "boos"}
+		Bar := map[string]interface{}{"Goos": "goos"}
+		m := map[string]interface{}{
+			"Foo": Foo,
+			"Bar": Bar,
+		}
+
+		Convey("Should return values contained in the map by a given namespace", func() {
+			namespaces := [][]string{
+				[]string{"Foo", "Foos"},
+				[]string{"Foo", "Boos"},
+				[]string{"Bar", "Goos"},
+			}
+
+			So(GetValueByNamespace(m, namespaces[0]), ShouldEqual, "foos")
+			So(GetValueByNamespace(m, namespaces[1]), ShouldEqual, "boos")
+			So(GetValueByNamespace(m, namespaces[2]), ShouldEqual, "goos")
+		})
+
+		Convey("Should not attempt to interface a zero value", func() {
+			So(func() { GetValueByNamespace(m, []string{"invalid"}) }, ShouldNotPanic)
+		})
+	})
+
+	Convey("When GetValueByNamespace is given some map with array", t, func() {
+		goos := []interface{}{"goo1", "goo2", "goo3"}
+		Foo := map[string]interface{}{"Foos": "foos", "Boos": "boos"}
+		Bar := map[string]interface{}{"Goos": goos}
+		m := map[string]interface{}{
+			"Foo": Foo,
+			"Bar": Bar,
+		}
+		Convey("Should return values contained in the array by a given namespace", func() {
+			namespaces := [][]string{
+				[]string{"Foo", "Foos"},
+				[]string{"Foo", "Boos"},
+				[]string{"Bar", "Goos", "0"},
+				[]string{"Bar", "Goos", "1"},
+				[]string{"Bar", "Goos", "2"},
+			}
+
+			So(GetValueByNamespace(m, namespaces[0]), ShouldEqual, "foos")
+			So(GetValueByNamespace(m, namespaces[1]), ShouldEqual, "boos")
+			So(GetValueByNamespace(m, namespaces[2]), ShouldEqual, "goo1")
+			So(GetValueByNamespace(m, namespaces[3]), ShouldEqual, "goo2")
+			So(GetValueByNamespace(m, namespaces[4]), ShouldEqual, "goo3")
+		})
+
+		Convey("Should not attempt to interface a zero value", func() {
+			So(func() { GetValueByNamespace(m, []string{"invalid"}) }, ShouldNotPanic)
+		})
+	})
+
 }
