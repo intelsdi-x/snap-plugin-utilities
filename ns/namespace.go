@@ -94,12 +94,71 @@ func FromCompositionTags(object interface{}, current string, namespace *[]string
 		InspectEmptyContainers(AlwaysFalse))
 }
 
-// GetValueByNamespace returns value stored in struct composition.
-// It requires filed tags on each struct field which may be represented as namespace component.
-// It iterates over fields recursively, checks tags until it finds leaf value.
+// GetValueByNamespace returns value stored in nested map, array or struct composition.
+// TODO Implementation of handling complex compositions with map/slice
 func GetValueByNamespace(object interface{}, ns []string) interface{} {
+
+	if len(ns) == 0 {
+		fmt.Fprintf(os.Stderr, "Namespace length equal to zero\n")
+		return nil
+	}
+
+	if object == nil {
+		fmt.Fprintf(os.Stderr, "First parameter cannot be nil!\n")
+		return nil
+	}
+
 	// current level of namespace
 	current := ns[0]
+
+	switch reflect.TypeOf(object).Kind() {
+	case reflect.Map:
+		if m, ok := object.(map[string]interface{}); ok {
+			if val, ok := m[current]; ok {
+				if len(ns) == 1 {
+					return val
+				}
+				return GetValueByNamespace(val, ns[1:])
+			}
+			fmt.Fprintf(os.Stderr, "Key does not exist in map {key %s}\n", current)
+			return nil
+		}
+	case reflect.Slice:
+		curr, err := strconv.Atoi(current)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot convert index to integer {idx %v}\n", current)
+			return nil
+		}
+
+		if a, ok := object.([]interface{}); ok {
+			if curr >= len(a) {
+				fmt.Fprintf(os.Stderr, "Index out of range {idx %v}\n", current)
+				return nil
+			}
+			if len(ns) == 1 {
+				return a[curr]
+			}
+			return GetValueByNamespace(a[curr], ns[1:])
+		}
+	case reflect.Ptr:
+		// TODO Implementation of handling pointers to objects other than structs
+		return GetStructValueByNamespace(object, ns)
+	case reflect.Struct:
+		return GetStructValueByNamespace(object, ns)
+	default:
+		fmt.Fprintf(os.Stderr, "Unsupported object type {object %v}", object)
+	}
+
+	return nil
+}
+
+// GetStructValueByNamespace returns value stored in struct composition.
+// It requires filed tags on each struct field which may be represented as namespace component.
+// It iterates over fields recursively, checks tags until it finds leaf value.
+func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
+	// current level of namespace
+	current := ns[0]
+
 	fields, err := reflections.Fields(object)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not return fields for object{%v}\n", object)
@@ -126,7 +185,7 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 				idx, _ := strconv.Atoi(ns[1])
 				val := reflect.ValueOf(val)
 				if val.Index(idx).Kind() == reflect.Struct {
-					return GetValueByNamespace(val.Index(idx).Interface(), ns[2:])
+					return GetStructValueByNamespace(val.Index(idx).Interface(), ns[2:])
 				} else {
 					return val.Index(idx).Interface()
 				}
@@ -140,7 +199,7 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 				val := reflect.ValueOf(val)
 				kval := reflect.ValueOf(key)
 				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
-					return GetValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
+					return GetStructValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
 				}
 			case reflect.Ptr:
 				v := reflect.Indirect(reflect.ValueOf(val))
@@ -153,7 +212,7 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 				if len(ns) == 1 {
 					return v.Interface()
 				} else {
-					return GetValueByNamespace(v.Interface(), ns[1:])
+					return GetStructValueByNamespace(v.Interface(), ns[1:])
 				}
 			default:
 				// last ns, return value found
@@ -161,7 +220,7 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 					return val
 				} else {
 					// or go deeper
-					return GetValueByNamespace(val, ns[1:])
+					return GetStructValueByNamespace(val, ns[1:])
 				}
 			}
 		}
