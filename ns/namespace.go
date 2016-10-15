@@ -171,8 +171,10 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 			fmt.Fprintf(os.Stderr, "Could not find tag for field{%s}\n", field)
 			return nil
 		}
+
 		// remove omitempty from tag
-		tag = strings.Replace(tag, ",omitempty", "", -1)
+		tag = strings.Split(tag, ",")[0]
+
 		if tag == current {
 			val, err := reflections.GetField(object, field)
 			if err != nil {
