@@ -1,0 +1,13 @@
+package: github.com/intelsdi-x/snap-plugin-utilities
+import:
+- package: github.com/Sirupsen/logrus
+- package: github.com/intelsdi-x/snap
+  subpackages:
+  - control/plugin
+  - core
+  - core/ctypes
+- package: github.com/oleiade/reflections
+testImport:
+- package: github.com/smartystreets/goconvey
+  subpackages:
+  - convey
