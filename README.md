@@ -64,7 +64,7 @@ See it in action:
 ```go
 	interestingItems := []string{"dummy_string", "dummy_bool", "dummy_int", "dummy_float"}
 
-	if interestingValues, err := GetGlobalConfigItems(cfg, interestingItems); err != nil {
+	if interestingValues, err := GetGlobalConfigItems(cfg, interestingItems...); err != nil {
 		for _, interestingValue := range interestingValues {
 			DoSomething(interestingValue)
 		}
@@ -75,8 +75,7 @@ See it in action:
 [logger] package
 ---------------------------------------------------------------------------------------------
 
-The `logger` package wraps logrus package (https://github.com/Sirupsen/logrus).
-It sets logging from plugin to separate file. It adds caller function name to each message.
+The `logger` provides function to set up loging for plugin. It usses logrus package (https://github.com/Sirupsen/logrus).
 
 ```go
 import (
@@ -84,15 +83,15 @@ import (
 )
 
 func main() {
-	
-	LogDebug("Some useful information", "varibale", value)
-	LogInfo("Some information worth noting", interesting, thing, done)
-	LogWarn("Take a look on that", warning)
-	LogError("This is bad", "error", err)
+	logger := GetLogger(cfg, pluginName, pluginVersion, pluginType)
+	logger.Debug("Some useful information")
+	logger.Info("Some information worth noting")
+	logger.Warn("Take a look on that")
+	logger.Error("This is bad")
 	// Exit after
-	LogFatal("This is really bad", "error", err, value)
+	logger.Fatal("This is really bad")
 	// Call panic()
-	LogPanic("Show me the stacks!")
+	logger.Panic("Show me the stacks!")
 }
 
 ```
