@@ -20,7 +20,6 @@ limitations under the License.
 package logger
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -48,7 +47,8 @@ func init() {
 	if logFile == nil {
 		logFile, err = os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
-			fmt.Println("Logging to stderr")
+			// writing non-JSON to stdout is forbidden in Snap plugin init
+			os.StdErr.WriteString("Logging to stderr")
 		}
 	}
 
