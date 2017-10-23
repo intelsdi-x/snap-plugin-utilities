@@ -48,7 +48,7 @@ func init() {
 		logFile, err = os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
 			// writing non-JSON to stdout is forbidden in Snap plugin init
-			os.StdErr.WriteString("Logging to stderr")
+			os.Stderr.WriteString("Logging to stderr")
 		}
 	}
 
