@@ -1,3 +1,5 @@
+TEST?="unit"
+
 default:
 	$(MAKE) deps
 	$(MAKE) all
