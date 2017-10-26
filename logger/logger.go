@@ -27,7 +27,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
 )
 
 type Fields map[string]interface{}
