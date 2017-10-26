@@ -21,13 +21,13 @@ package logger
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 )
 
 type Fields map[string]interface{}
