@@ -4,7 +4,7 @@ default:
 	$(MAKE) deps
 	$(MAKE) all
 deps:
-	bash -c "godep restore"
+	bash -c "./scripts/deps.sh"
 test:
 	bash -c "./scripts/test.sh $(TEST)"
 check:
