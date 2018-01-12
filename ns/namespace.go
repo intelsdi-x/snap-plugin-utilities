@@ -28,7 +28,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/intelsdi-x/snap-plugin-utilities/str"
+	"github.com/librato/snap-plugin-utilities/str"
 	"github.com/oleiade/reflections"
 )
 
@@ -97,6 +97,10 @@ func FromCompositionTags(object interface{}, current string, namespace *[]string
 // GetValueByNamespace returns value stored in nested map, array or struct composition.
 // TODO Implementation of handling complex compositions with map/slice
 func GetValueByNamespace(object interface{}, ns []string) interface{} {
+	return GetValueByNamespaceTag(object, ns, "json")
+}
+
+func GetValueByNamespaceTag(object interface{}, ns []string, tagName string) interface{} {
 
 	if len(ns) == 0 {
 		fmt.Fprintf(os.Stderr, "Namespace length equal to zero\n")
@@ -118,7 +122,7 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 				if len(ns) == 1 {
 					return val
 				}
-				return GetValueByNamespace(val, ns[1:])
+				return GetValueByNamespaceTag(val, ns[1:], tagName)
 			}
 			fmt.Fprintf(os.Stderr, "Key does not exist in map {key %s}\n", current)
 			return nil
@@ -138,13 +142,13 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 			if len(ns) == 1 {
 				return a[curr]
 			}
-			return GetValueByNamespace(a[curr], ns[1:])
+			return GetValueByNamespaceTag(a[curr], ns[1:], tagName)
 		}
 	case reflect.Ptr:
 		// TODO Implementation of handling pointers to objects other than structs
-		return GetStructValueByNamespace(object, ns)
+		return GetStructValueByNamespaceTag(object, ns, tagName)
 	case reflect.Struct:
-		return GetStructValueByNamespace(object, ns)
+		return GetStructValueByNamespaceTag(object, ns, tagName)
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported object type {object %v}", object)
 	}
@@ -156,6 +160,10 @@ func GetValueByNamespace(object interface{}, ns []string) interface{} {
 // It requires filed tags on each struct field which may be represented as namespace component.
 // It iterates over fields recursively, checks tags until it finds leaf value.
 func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
+	return GetStructValueByNamespaceTag(object, ns, "json")
+}
+
+func GetStructValueByNamespaceTag(object interface{}, ns []string, tagName string) interface{} {
 	// current level of namespace
 	current := ns[0]
 
@@ -166,7 +174,7 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 	}
 
 	for _, field := range fields {
-		tag, err := reflections.GetFieldTag(object, field, "json")
+		tag, err := reflections.GetFieldTag(object, field, tagName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not find tag for field{%s}\n", field)
 			return nil
@@ -187,7 +195,7 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 				idx, _ := strconv.Atoi(ns[1])
 				val := reflect.ValueOf(val)
 				if val.Index(idx).Kind() == reflect.Struct {
-					return GetStructValueByNamespace(val.Index(idx).Interface(), ns[2:])
+					return GetStructValueByNamespaceTag(val.Index(idx).Interface(), ns[2:], tagName)
 				} else {
 					return val.Index(idx).Interface()
 				}
@@ -201,7 +209,7 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 				val := reflect.ValueOf(val)
 				kval := reflect.ValueOf(key)
 				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
-					return GetStructValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
+					return GetStructValueByNamespaceTag(val.MapIndex(kval).Interface(), ns[2:], tagName)
 				}
 			case reflect.Ptr:
 				v := reflect.Indirect(reflect.ValueOf(val))
@@ -214,7 +222,7 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 				if len(ns) == 1 {
 					return v.Interface()
 				} else {
-					return GetStructValueByNamespace(v.Interface(), ns[1:])
+					return GetStructValueByNamespaceTag(v.Interface(), ns[1:], tagName)
 				}
 			default:
 				// last ns, return value found
@@ -222,7 +230,7 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 					return val
 				} else {
 					// or go deeper
-					return GetStructValueByNamespace(val, ns[1:])
+					return GetStructValueByNamespaceTag(val, ns[1:], tagName)
 				}
 			}
 		}
@@ -254,12 +262,12 @@ func ValidateMetricNamespacePart(ns string) error {
 	return nil
 }
 
-// getJsonFieldName gets an object's field name compatible with json tag on;
+// getTagFieldName gets an object's field name compatible with json tag on;
 // details can be found in docs for pkg  json. If json tag is empty, or no
 // tag is present then original  fieldName will be reported. If json tag hides
 // a field, function will return dash "-" as name.
-func getJsonFieldName(object interface{}, fieldName string) (string, error) {
-	jsonTag, err := reflections.GetFieldTag(object, fieldName, "json")
+func getTagFieldName(object interface{}, tagName string, fieldName string) (string, error) {
+	jsonTag, err := reflections.GetFieldTag(object, fieldName, tagName)
 	if err != nil {
 		return "", err
 	} else if jsonTag == "" {
@@ -377,6 +385,10 @@ const (
 // Different options may be specified to implement selective and
 // context-sensitive inspection.
 func FromCompositeObject(object interface{}, current string, namespace *[]string, options ...OptionFunc) error {
+	return FromCompositeObjectTag(object, "json", current, namespace, options...)
+}
+
+func FromCompositeObjectTag(object interface{}, tagName string, current string, namespace *[]string, options ...OptionFunc) error {
 	flags := map[int]FlagFunc{}
 	options = append([]OptionFunc{
 		InspectEmptyContainers(AlwaysTrue),
@@ -389,10 +401,14 @@ func FromCompositeObject(object interface{}, current string, namespace *[]string
 		key, filter := option()
 		flags[key] = filter
 	}
-	return fromCompositeObject(object, current, namespace, flags)
+	return fromCompositeObjectTag(object, tagName, current, namespace, flags)
 }
 
 func fromCompositeObject(object interface{}, current string, namespace *[]string, flags map[int]FlagFunc) error {
+	return fromCompositeObjectTag(object, "json", current, namespace, flags)
+}
+
+func fromCompositeObjectTag(object interface{}, tagName string, current string, namespace *[]string, flags map[int]FlagFunc) error {
 	val := reflect.Indirect(reflect.ValueOf(object))
 	saneAppendNs := func() {
 		if current != "" {
@@ -421,12 +437,12 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 			return nil
 		}
 		nuObj := reflect.Zero(val.Type().Elem())
-		if err := fromCompositeObject(nuObj.Interface(), current, namespace, flags); err != nil {
+		if err := fromCompositeObjectTag(nuObj.Interface(), tagName, current, namespace, flags); err != nil {
 			return err
 		}
 		return nil
 	case reflect.Ptr:
-		return fromCompositeObject(val.Interface(), current, namespace, flags)
+		return fromCompositeObjectTag(val.Interface(), tagName, current, namespace, flags)
 	case reflect.Map:
 		if true == flags[entryForContainersRoot](current, val.Type()) {
 			saneAppendNs()
@@ -438,8 +454,9 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 			}
 			typ := reflect.TypeOf(object)
 			nuObj := reflect.Zero(typ.Elem()).Interface()
-			if err := fromCompositeObject(
+			if err := fromCompositeObjectTag(
 				nuObj,
+				tagName,
 				regularExtendNs("*"),
 				namespace,
 				flags); err != nil {
@@ -448,8 +465,9 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 		}
 
 		for _, mkey := range val.MapKeys() {
-			if err := fromCompositeObject(
+			if err := fromCompositeObjectTag(
 				val.MapIndex(mkey).Interface(),
+				tagName,
 				safeExtendNs(mkey.String()),
 				namespace,
 				flags); err != nil {
@@ -467,8 +485,9 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 			}
 			typ := reflect.TypeOf(object)
 			nuObj := reflect.Zero(typ.Elem()).Interface()
-			if err := fromCompositeObject(
+			if err := fromCompositeObjectTag(
 				nuObj,
+				tagName,
 				regularExtendNs("*"),
 				namespace,
 				flags); err != nil {
@@ -476,7 +495,9 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 			}
 		}
 		for i := 0; i < val.Len(); i++ {
-			if err := fromCompositeObject(val.Index(i).Interface(),
+			if err := fromCompositeObjectTag(
+				val.Index(i).Interface(),
+				tagName,
 				regularExtendNs(strconv.Itoa(i)),
 				namespace,
 				flags); err != nil {
@@ -499,7 +520,7 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 			}
 			fieldName := field
 			if true == exportJsonFieldNamesHere {
-				jsonField, err := getJsonFieldName(object, field)
+				jsonField, err := getTagFieldName(object, tagName, field)
 				if err != nil {
 					return err
 				}
@@ -510,7 +531,7 @@ func fromCompositeObject(object interface{}, current string, namespace *[]string
 				fieldName = jsonField
 			}
 			nuCurrent := safeExtendNs(fieldName)
-			if err := fromCompositeObject(f, nuCurrent, namespace, flags); err != nil {
+			if err := fromCompositeObjectTag(f, tagName, nuCurrent, namespace, flags); err != nil {
 				return err
 			}
 		}
