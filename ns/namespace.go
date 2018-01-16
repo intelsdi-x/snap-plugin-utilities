@@ -117,6 +117,21 @@ func GetValueByNamespaceTag(object interface{}, ns []string, tagName string) int
 	switch reflect.TypeOf(object).Kind() {
 	case reflect.Map:
 		if m, ok := object.(map[string]interface{}); ok {
+
+			if current == "*" {
+				vals := make(map[string]interface{})
+
+				for k, v := range m {
+					if len(ns) == 1 {
+						vals[k] = v
+					} else {
+						vals[k] = GetValueByNamespaceTag(v, ns[1:], tagName)
+					}
+				}
+
+				return vals
+			}
+
 			if val, ok := m[current]; ok {
 				if len(ns) == 1 {
 					return val
