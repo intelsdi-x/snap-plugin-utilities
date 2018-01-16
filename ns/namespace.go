@@ -207,6 +207,18 @@ func GetStructValueByNamespaceTag(object interface{}, ns []string, tagName strin
 				}
 
 				val := reflect.ValueOf(val)
+
+				if key == "*" {
+					vals := make(map[string]interface{})
+
+					for _, k := range val.MapKeys() {
+						v := val.MapIndex(k).Interface()
+						vals[k.String()] = GetValueByNamespaceTag(v, ns[2:], tagName)
+					}
+
+					return vals
+				}
+
 				kval := reflect.ValueOf(key)
 				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
 					return GetStructValueByNamespaceTag(val.MapIndex(kval).Interface(), ns[2:], tagName)
