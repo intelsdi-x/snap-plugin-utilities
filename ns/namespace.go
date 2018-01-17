@@ -560,7 +560,6 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 		}
 
 		exportTaggedFieldNamesHere := flags[exportTaggedFieldNames](current, val.Type())
-		exportTaggedFieldNamesHere := flags[exportTaggedFieldNames](current, val.Type())
 		for _, field := range fields {
 			f, err := reflections.GetField(object, field)
 			if err != nil {
