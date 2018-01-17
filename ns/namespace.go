@@ -301,19 +301,19 @@ func ValidateMetricNamespacePart(ns string) error {
 // tag is present then original  fieldName will be reported. If json tag hides
 // a field, function will return dash "-" as name.
 func getTagFieldName(object interface{}, tagName string, fieldName string) (string, error) {
-	jsonTag, err := reflections.GetFieldTag(object, fieldName, tagName)
+	fieldTag, err := reflections.GetFieldTag(object, fieldName, tagName)
 	if err != nil {
 		return "", err
-	} else if jsonTag == "" {
+	} else if fieldTag == "" {
 		return fieldName, nil
 	}
 
-	i := strings.Index(jsonTag, ",")
+	i := strings.Index(fieldTag, ",")
 	if i == -1 {
-		return jsonTag, nil
+		return fieldTag, nil
 	}
 
-	if tag := jsonTag[:i]; tag == "-" {
+	if tag := fieldTag[:i]; tag == "-" {
 		return "-", nil
 	} else if tag == "" {
 		return fieldName, nil
@@ -368,7 +368,7 @@ func EntryForContainersRoot(flagFunc FlagFunc) OptionFunc {
 // contains dash ('-') for any field, field won't be exported.
 func ExportJsonFieldNames(flagFunc FlagFunc) OptionFunc {
 	return func() (int, FlagFunc) {
-		return exportJsonFieldNames, flagFunc
+		return exportTaggedFieldNames, flagFunc
 	}
 }
 
@@ -404,7 +404,7 @@ const (
 	inspectNilPointers = iota
 	inspectEmptyContainers
 	entryForContainersRoot
-	exportJsonFieldNames
+	exportTaggedFieldNames
 	wildcardEntryInContainer
 	sanitizeNamespaceParts
 )
@@ -559,7 +559,8 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 			return err
 		}
 
-		exportJsonFieldNamesHere := flags[exportJsonFieldNames](current, val.Type())
+		exportTaggedFieldNamesHere := flags[exportTaggedFieldNames](current, val.Type())
+		exportTaggedFieldNamesHere := flags[exportTaggedFieldNames](current, val.Type())
 		for _, field := range fields {
 			f, err := reflections.GetField(object, field)
 			if err != nil {
@@ -567,18 +568,18 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 			}
 
 			fieldName := field
-			if true == exportJsonFieldNamesHere {
-				jsonField, err := getTagFieldName(object, tagName, field)
+			if true == exportTaggedFieldNamesHere {
+				tagField, err := getTagFieldName(object, tagName, field)
 				if err != nil {
 					return err
 				}
 
 				// hidden field - skip it
-				if jsonField == "-" {
+				if tagField == "-" {
 					continue
 				}
 
-				fieldName = jsonField
+				fieldName = tagField
 			}
 
 			nuCurrent := safeExtendNs(fieldName)
