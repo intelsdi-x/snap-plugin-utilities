@@ -115,23 +115,27 @@ func GetValueByNamespaceTag(object interface{}, ns []string, tagName string) int
 	current := ns[0]
 
 	switch reflect.TypeOf(object).Kind() {
+
 	case reflect.Map:
-		if m, ok := object.(map[string]interface{}); ok {
+		if current == "*" {
+			vals := make(map[string]interface{})
+			val := reflect.ValueOf(object)
 
-			if current == "*" {
-				vals := make(map[string]interface{})
+			for _, kv := range val.MapKeys() {
+				v := val.MapIndex(kv).Interface()
+				k := strings.ToLower(ReplaceNotAllowedCharsInNamespacePart(kv.String()))
 
-				for k, v := range m {
-					if len(ns) == 1 {
-						vals[k] = v
-					} else {
-						vals[k] = GetValueByNamespaceTag(v, ns[1:], tagName)
-					}
+				if len(ns) == 1 {
+					vals[k] = v
+				} else {
+					vals[k] = GetValueByNamespaceTag(v, ns[1:], tagName)
 				}
-
-				return vals
 			}
 
+			return vals
+		}
+
+		if m, ok := object.(map[string]interface{}); ok {
 			if val, ok := m[current]; ok {
 				if len(ns) == 1 {
 					return val
