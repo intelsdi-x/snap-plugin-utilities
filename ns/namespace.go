@@ -478,13 +478,23 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 		}
 
 		nuObj := reflect.Zero(val.Type().Elem())
-		if err := fromCompositeObjectTag(nuObj.Interface(), tagName, current, namespace, flags); err != nil {
+		if err := fromCompositeObjectTag(
+			nuObj.Interface(),
+			tagName,
+			current,
+			namespace,
+			flags); err != nil {
 			return err
 		}
 
 		return nil
 	case reflect.Ptr:
-		return fromCompositeObjectTag(val.Interface(), tagName, current, namespace, flags)
+		return fromCompositeObjectTag(
+			val.Interface(),
+			tagName,
+			current,
+			namespace,
+			flags)
 	case reflect.Map:
 		if true == flags[entryForContainersRoot](current, val.Type()) {
 			saneAppendNs()
@@ -582,7 +592,12 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 			}
 
 			nuCurrent := safeExtendNs(fieldName)
-			if err := fromCompositeObjectTag(f, tagName, nuCurrent, namespace, flags); err != nil {
+			if err := fromCompositeObjectTag(
+				f,
+				tagName,
+				nuCurrent,
+				namespace,
+				flags); err != nil {
 				return err
 			}
 		}
