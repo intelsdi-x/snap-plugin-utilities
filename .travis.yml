@@ -5,7 +5,7 @@ go:
 - 1.9.1
 env:
   global:
-    - SNAP_PLUGIN_SOURCE=/home/travis/gopath/src/github.com/librato/snap-plugin-utilities
+    - SNAP_PLUGIN_SOURCE=/home/travis/gopath/src/github.com/intelsdi-x/snap-plugin-utilities
     - TMP=/tmp/dump  
   matrix:
     - TEST=unit

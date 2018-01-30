@@ -17,8 +17,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # snap Plugin Utilities
-[![Build Status](https://travis-ci.org/librato/snap-plugin-utilities.svg?branch=master)](https://travis-ci.org/librato/snap-plugin-utilities)
-[![GoDoc](https://godoc.org/github.com/librato/snap-plugin-utilities?status.svg)](https://godoc.org/github.com/librato/snap-plugin-utilities)
+[![Build Status](https://travis-ci.org/intelsdi-x/snap-plugin-utilities.svg?branch=master)](https://travis-ci.org/intelsdi-x/snap-plugin-utilities)
+[![GoDoc](https://godoc.org/github.com/intelsdi-x/snap-plugin-utilities?status.svg)](https://godoc.org/github.com/intelsdi-x/snap-plugin-utilities)
 
 Set of packages that provide tools for plugin development
 
