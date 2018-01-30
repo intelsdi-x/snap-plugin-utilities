@@ -28,7 +28,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/librato/snap-plugin-utilities/str"
 	"github.com/oleiade/reflections"
 )
 
@@ -296,18 +295,11 @@ func ValidateMetricNamespacePart(ns string) error {
 	return nil
 }
 
-// getTagFieldName gets an object's field name compatible with json tag on;
-// details can be found in docs for pkg  json. If json tag is empty, or no
-// tag is present then original  fieldName will be reported. If json tag hides
+// getTagFieldName gets an object's field name compatible with given tag on;
+// details can be found in docs for pkg  json. If the tag is empty, or no
+// tag is present then original  fieldName will be reported. If the tag hides
 // a field, function will return dash "-" as name.
-func getTagFieldName(object interface{}, tagName string, fieldName string) (string, error) {
-	fieldTag, err := reflections.GetFieldTag(object, fieldName, tagName)
-	if err != nil {
-		return "", err
-	} else if fieldTag == "" {
-		return fieldName, nil
-	}
-
+func getTagFieldName(fieldTag string, fieldName string) (string, error) {
 	i := strings.Index(fieldTag, ",")
 	if i == -1 {
 		return fieldTag, nil
@@ -421,10 +413,18 @@ const (
 // Different options may be specified to implement selective and
 // context-sensitive inspection.
 func FromCompositeObject(object interface{}, current string, namespace *[]string, options ...OptionFunc) error {
-	return FromCompositeObjectTag(object, "json", current, namespace, options...)
+	namespacesMeta := make(map[string]string, 0)
+
+	err := FromCompositeObjectTag(object, "json", current, namespacesMeta, options...)
+
+	for n := range namespacesMeta {
+		*namespace = append(*namespace, n)
+	}
+
+	return err
 }
 
-func FromCompositeObjectTag(object interface{}, tagName string, current string, namespace *[]string, options ...OptionFunc) error {
+func FromCompositeObjectTag(object interface{}, tagName string, current string, namespacesMeta map[string]string, options ...OptionFunc) error {
 	flags := map[int]FlagFunc{}
 	options = append([]OptionFunc{
 		InspectEmptyContainers(AlwaysTrue),
@@ -438,19 +438,15 @@ func FromCompositeObjectTag(object interface{}, tagName string, current string, 
 		flags[key] = filter
 	}
 
-	return fromCompositeObjectTag(object, tagName, current, namespace, flags)
+	return fromCompositeObjectTag(object, tagName, current, namespacesMeta, flags)
 }
 
-func fromCompositeObject(object interface{}, current string, namespace *[]string, flags map[int]FlagFunc) error {
-	return fromCompositeObjectTag(object, "json", current, namespace, flags)
-}
-
-func fromCompositeObjectTag(object interface{}, tagName string, current string, namespace *[]string, flags map[int]FlagFunc) error {
+func fromCompositeObjectTag(object interface{}, tagName string, current string, namespacesMeta map[string]string, flags map[int]FlagFunc) error {
 	val := reflect.Indirect(reflect.ValueOf(object))
 	saneAppendNs := func() {
 		if current != "" {
-			if !str.Contains(*namespace, current) {
-				*namespace = append(*namespace, current)
+			if _, ok := namespacesMeta[current]; !ok {
+				namespacesMeta[current] = ""
 			}
 		}
 	}
@@ -482,7 +478,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 			nuObj.Interface(),
 			tagName,
 			current,
-			namespace,
+			namespacesMeta,
 			flags); err != nil {
 			return err
 		}
@@ -493,7 +489,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 			val.Interface(),
 			tagName,
 			current,
-			namespace,
+			namespacesMeta,
 			flags)
 	case reflect.Map:
 		if true == flags[entryForContainersRoot](current, val.Type()) {
@@ -512,7 +508,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 				nuObj,
 				tagName,
 				regularExtendNs("*"),
-				namespace,
+				namespacesMeta,
 				flags); err != nil {
 				return err
 			}
@@ -523,7 +519,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 				val.MapIndex(mkey).Interface(),
 				tagName,
 				safeExtendNs(mkey.String()),
-				namespace,
+				namespacesMeta,
 				flags); err != nil {
 				return err
 			}
@@ -544,7 +540,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 				nuObj,
 				tagName,
 				regularExtendNs("*"),
-				namespace,
+				namespacesMeta,
 				flags); err != nil {
 				return err
 			}
@@ -554,7 +550,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 				val.Index(i).Interface(),
 				tagName,
 				regularExtendNs(strconv.Itoa(i)),
-				namespace,
+				namespacesMeta,
 				flags); err != nil {
 				return err
 			}
@@ -576,27 +572,35 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 				return err
 			}
 
-			fieldName := field
+			fieldTag, err := reflections.GetFieldTag(object, field, tagName)
+			if err != nil {
+				return err
+			} else if fieldTag == "" {
+				fieldTag = field
+			}
+
 			if true == exportTaggedFieldNamesHere {
-				tagField, err := getTagFieldName(object, tagName, field)
+				tagFieldName, err := getTagFieldName(fieldTag, field)
 				if err != nil {
 					return err
 				}
 
 				// hidden field - skip it
-				if tagField == "-" {
+				if tagFieldName == "-" {
 					continue
 				}
 
-				fieldName = tagField
+				field = tagFieldName
 			}
 
-			nuCurrent := safeExtendNs(fieldName)
+			nuCurrent := safeExtendNs(field)
+			namespacesMeta[nuCurrent] = fieldTag
+
 			if err := fromCompositeObjectTag(
 				f,
 				tagName,
 				nuCurrent,
-				namespace,
+				namespacesMeta,
 				flags); err != nil {
 				return err
 			}
@@ -605,7 +609,7 @@ func fromCompositeObjectTag(object interface{}, tagName string, current string, 
 		saneAppendNs()
 	}
 
-	if len(*namespace) == 0 {
+	if len(namespacesMeta) == 0 {
 		return fmt.Errorf("Namespace empty!")
 	}
 
