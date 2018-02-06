@@ -1,4 +1,4 @@
-package: github.com/intelsdi-x/snap-plugin-utilities
+package: github.com/librato/snap-plugin-utilities
 import:
 - package: github.com/intelsdi-x/snap
   subpackages:
