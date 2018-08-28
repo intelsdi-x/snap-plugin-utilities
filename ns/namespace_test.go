@@ -1291,12 +1291,18 @@ func TestGetValueByNamespace(t *testing.T) {
 			DataThree *bar     `json:"data_three,omitempty"`
 		}
 		m := struct {
-			ID      string      `json:"id"`
-			Invalid interface{} `json:"invalid"`
-			Data    *foo        `json:"data"`
+			ID         string      `json:"id"`
+			InvalidOne interface{} `json:"invalid_one"`
+			InvalidTwo struct {
+				NestedMap map[string]int `json:"nested_map"`
+			} `json:"invalid_two"`
+			InvalidThree struct {
+				NestedSlice []int `json:"nested_slice"`
+			} `json:"invalid_three"`
+			Data *foo `json:"data"`
 		}{
-			ID:      "FooID-12345",
-			Invalid: new(interface{}),
+			ID:         "FooID-12345",
+			InvalidOne: new(interface{}),
 			Data: &foo{
 				DataOne: 127,
 				DataTwo: dataTwo,
@@ -1325,7 +1331,17 @@ func TestGetValueByNamespace(t *testing.T) {
 		})
 
 		Convey("Should not attempt to interface a zero value", func() {
-			So(func() { GetValueByNamespace(m, []string{"invalid"}) }, ShouldNotPanic)
+			So(func() { GetValueByNamespace(m, []string{"invalid_one"}) }, ShouldNotPanic)
+		})
+
+		Convey("Should not fail on an empty map", func() {
+			So(func() { GetValueByNamespace(m, []string{"invalid_two", "nested_map"}) }, ShouldNotPanic)
+			So(func() { GetValueByNamespace(m, []string{"invalid_two", "nested_map", "missing_key"}) }, ShouldNotPanic)
+		})
+
+		Convey("Should not fail on an empty slice", func() {
+			So(func() { GetValueByNamespace(m, []string{"invalid_three", "nested_slice"}) }, ShouldNotPanic)
+			So(func() { GetValueByNamespace(m, []string{"invalid_three", "nested_slice", "0"}) }, ShouldNotPanic)
 		})
 	})
 

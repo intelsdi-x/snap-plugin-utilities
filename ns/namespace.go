@@ -184,14 +184,25 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 			// handling of special cases for slice and map
 			switch reflect.TypeOf(val).Kind() {
 			case reflect.Slice:
+				if len(ns) < 2 {
+					return nil
+				}
 				idx, _ := strconv.Atoi(ns[1])
+
 				val := reflect.ValueOf(val)
+				if val.IsNil() || val.Len() == 0 {
+					return nil
+				}
+
 				if val.Index(idx).Kind() == reflect.Struct {
 					return GetStructValueByNamespace(val.Index(idx).Interface(), ns[2:])
 				} else {
 					return val.Index(idx).Interface()
 				}
 			case reflect.Map:
+				if len(ns) < 2 {
+					return nil
+				}
 				key := ns[1]
 
 				if vi, ok := val.(map[string]uint64); ok {
@@ -199,7 +210,12 @@ func GetStructValueByNamespace(object interface{}, ns []string) interface{} {
 				}
 
 				val := reflect.ValueOf(val)
+				if val.IsNil() || val.Len() == 0 {
+					return nil
+				}
+
 				kval := reflect.ValueOf(key)
+
 				if reflect.TypeOf(val.MapIndex(kval).Interface()).Kind() == reflect.Struct {
 					return GetStructValueByNamespace(val.MapIndex(kval).Interface(), ns[2:])
 				}
