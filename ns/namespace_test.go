@@ -29,7 +29,6 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"fmt"
 	_ "fmt"
 )
 
@@ -358,7 +357,6 @@ func TestSimpleStruct(t *testing.T) {
 
 func TestComplexStruct(t *testing.T) {
 	Convey("Given composition of structs", t, func() {
-		fmt.Printf("\nTU\n")
 		Foo := struct {
 			Bar struct {
 				Qaz int
